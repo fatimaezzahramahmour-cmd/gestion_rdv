@@ -1,0 +1,228 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cabinet Dentaire — Accueil</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{% static 'rdv/css/theme.css' %}" rel="stylesheet">
+  <style>
+    :root { --dental-green: #1a7f37; --dental-green-dark: #146b2d; --dental-blue: #2F80ED; --dental-blue-dark: #2563eb; --dental-blue-light: #60a5fa; --nav-blue: #1a365d; --text-dark: #1a1a2e; }
+    .navbar-public { background: #fff !important; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .navbar-public .navbar-brand { font-weight: 700; color: var(--nav-blue); }
+    .navbar-public .navbar-brand .brand-sub { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--nav-blue); opacity: .9; display: block; line-height: 1.2; }
+    .navbar-public .navbar-brand .brand-main { font-size: 1.1rem; font-weight: 700; color: var(--nav-blue); display: block; line-height: 1.2; }
+    .navbar-public .nav-center .nav-link { color: var(--dental-green) !important; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .03em; padding: 0.5rem 0.75rem; }
+    .navbar-public .nav-center .nav-link:hover { color: var(--dental-green-dark) !important; }
+    .navbar-public .nav-right .nav-link { color: var(--dental-green) !important; font-weight: 500; }
+    .navbar-public .nav-right .nav-link:hover { color: var(--dental-green-dark) !important; }
+    .btn-connexion { background: transparent; color: var(--dental-green) !important; border: none; font-weight: 600; padding: 8px 12px; }
+    .btn-connexion:hover { color: var(--dental-green-dark) !important; }
+    .btn-rdv { background: var(--dental-green); color: #fff !important; border-radius: 6px; padding: 8px 20px; font-weight: 600; border: none; text-transform: uppercase; letter-spacing: .03em; }
+    .btn-rdv:hover { background: var(--dental-green-dark); color: #fff; }
+    .hero {
+      min-height: 420px; display: flex; align-items: center;
+      background: linear-gradient(90deg, #e8eef4 0%, #e8eef4 42%, transparent 48%), linear-gradient(105deg, rgba(26, 54, 93, 0.15) 0%, transparent 45%), url('https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=1400') right center/cover no-repeat;
+    }
+    .hero .hero-left { color: var(--nav-blue); }
+    .hero h1 { font-size: 2.5rem; font-weight: 700; color: var(--nav-blue); }
+    .hero .lead { color: #5a6c7d; }
+    .hero .breadcrumb { background: transparent; padding: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; color: var(--nav-blue); }
+    .hero .breadcrumb-item + .breadcrumb-item::before { content: ">"; color: var(--nav-blue); opacity: .7; }
+    .hero .breadcrumb a { color: var(--nav-blue); text-decoration: none; }
+    .hero .breadcrumb a:hover { color: var(--dental-blue); }
+    .hero .text-success { color: var(--dental-green) !important; }
+    .section-title { font-weight: 700; color: var(--text-dark); margin-bottom: 2rem; }
+    .section-title small { color: var(--dental-blue); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .card-service { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); transition: transform .2s; }
+    .card-service:hover { transform: translateY(-4px); }
+    .card-service .icone-tooth { width: 48px; height: 48px; background: var(--dental-green); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.5rem; }
+    .footer-public { background: #1a1a2e; color: #fff; padding: 3rem 0 2rem; }
+    .footer-public a { color: #b0bec5; text-decoration: none; }
+    .footer-public a:hover { color: var(--dental-blue-light); }
+    .footer-public .footer-title { color: #fff; font-weight: 700; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 2px solid var(--dental-blue); display: inline-block; }
+    .bg-pattern { background-color: #f0fdf4; background-image: radial-gradient(circle at 20% 50%, rgba(26,127,55,.06) 0%, transparent 50%); }
+    .img-cabinet { border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.12); object-fit: cover; width: 100%; height: 280px; }
+    /* Notre travail — style ref */
+    .section-travail { background: #22c55e; background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30 30 60 0 30z' fill='%231a7f37' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0h2v8h-2V0zm0 12h2v8h-2v-8zm0 12h2v8h-2v-8zM8 20h8v2H8v-2zm12 0h8v2h-8v-2z' fill='%23ffffff' fill-opacity='0.06'/%3E%3C/svg%3E"); padding: 3.5rem 0 4rem; }
+    .card-travail { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.15); transition: transform .2s, box-shadow .2s; background: #fff; }
+    .card-travail:hover { transform: translateY(-6px); box-shadow: 0 12px 40px rgba(0,0,0,.2); }
+    .card-travail .card-img-wrap { position: relative; height: 200px; background: #e5e7eb center/cover no-repeat; }
+    .card-travail .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+    .card-travail .badge-icon { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; background: var(--dental-blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .card-travail .badge-icon svg { width: 24px; height: 24px; }
+    .card-travail .card-body { padding: 1.25rem; }
+    .card-travail .soins-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--dental-blue); margin-bottom: 0.25rem; }
+    .card-travail .service-name { font-size: 1.15rem; font-weight: 700; color: #1a365d; margin: 0; }
+    .btn-float-phone { position: fixed; bottom: 24px; left: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--dental-blue); color: #fff; border: none; box-shadow: 0 4px 20px rgba(47,128,237,.4); display: flex; align-items: center; justify-content: center; z-index: 1000; text-decoration: none; }
+    .btn-float-phone:hover { color: #fff; background: var(--dental-blue-dark); }
+    .btn-float-phone svg { width: 24px; height: 24px; }
+    .btn-float-whatsapp { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: #22c55e; color: #fff; border: none; box-shadow: 0 4px 20px rgba(34,197,94,.4); display: flex; align-items: center; justify-content: center; z-index: 1000; text-decoration: none; }
+    .btn-float-whatsapp:hover { color: #fff; background: #16a34a; }
+    .btn-float-whatsapp svg { width: 28px; height: 28px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light navbar-public py-3">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'accueil' %}">
+        <img src="https://i.pinimg.com/736x/9c/87/99/9c879909741ebaa6b7a614071079e542.jpg"
+             alt="Centre dentaire" height="52" class="d-block rounded-circle">
+        <span>
+          <span class="brand-sub">Centre Dentaire</span>
+          <span class="brand-main">Cabinet dentaire</span>
+        </span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav nav-center mx-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#accueil">Accueil</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#centre">Centre dentaire</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#services">Soins et services</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#contact">Contact</a></li>
+        </ul>
+        <ul class="navbar-nav nav-right align-items-center gap-1">
+          {% if request.user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'rdv_list' %}">Mes rendez-vous</a></li>
+            <li class="nav-item"><a class="btn btn-connexion" href="{% url 'logout' %}">Déconnexion</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link btn btn-connexion" href="{% url 'login' %}">Se connecter</a></li>
+            <li class="nav-item"><a class="btn btn-rdv" href="{% url 'signup' %}">RDV +</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero py-5" id="accueil">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-6 col-xl-5 hero-left">
+          <nav aria-label="Fil d'Ariane" class="mb-3">
+            <ol class="breadcrumb mb-0">
+              <li class="breadcrumb-item"><a href="{% url 'accueil' %}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/></svg> Accueil</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Rendez-vous</li>
+            </ol>
+          </nav>
+          <h1 class="mb-3">Rendez-vous</h1>
+          <p class="lead mb-4">Votre centre dentaire pour les soins, l’esthétique et la prévention. Prenez rendez-vous en ligne.</p>
+          {% if not request.user.is_authenticated %}
+          <a class="btn btn-rdv btn-lg" href="{% url 'signup' %}">Prendre rendez-vous</a>
+          {% else %}
+          <a class="btn btn-rdv btn-lg" href="{% url 'rdv_create' %}">Nouveau rendez-vous</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Centre dentaire -->
+  <section class="py-5" id="centre">
+    <div class="container">
+      <h2 class="section-title"><small>Centre dentaire</small><br>Notre cabinet</h2>
+      <div class="row align-items-center g-4">
+        <div class="col-lg-6 order-lg-2">
+          <img src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800" alt="Cabinet dentaire — équipe et soins" class="img-cabinet">
+        </div>
+        <div class="col-lg-6 order-lg-1">
+          <h3 class="h4 mb-3" style="color: var(--dental-green);">Dentiste — Cabinet dentaire</h3>
+          <p class="text-muted">Vous recherchez un cabinet dentaire compétent et à l’écoute ? Nous vous accueillons pour l’ensemble des soins : consultation, détartrage, soins des caries, prothèses, esthétique dentaire et suivi personnalisé.</p>
+          <p class="text-muted">Notre cabinet est ouvert du lundi au vendredi. Prise de rendez-vous en ligne ou par téléphone.</p>
+          <div class="bg-light rounded-3 p-4 border-start border-4 border-success mt-3">
+            <p class="mb-1"><strong>Horaires</strong></p>
+            <p class="text-muted small mb-0">Lundi – Vendredi : 9h30 – 19h30</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Notre travail — Soins et services (comme la ref) -->
+  <section class="section-travail" id="services">
+    <div class="container position-relative">
+      <h2 class="section-title text-center mb-4"><small style="color:rgba(255,255,255,.9);">Soins et services</small><br><span style="color:#fff;">Notre travail</span></h2>
+      <div class="row g-4">
+        {% for s in services %}
+        <div class="col-md-6 col-lg-4">
+          <div class="card card-travail h-100">
+            <div class="card-img-wrap">
+              {% if s.image_url %}
+                <img src="{{ s.image_url }}" alt="{{ s.nom }}">
+              {% else %}
+                <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=600" alt="{{ s.nom }}">
+              {% endif %}
+              <div class="badge-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M12 2c2 0 3 2 3 4v2c0 4-1 7-3 9v4H9v-4c-2-2-3-5-3-9V6c0-2 1-4 3-4z"/><path d="M9 12h6"/></svg>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="soins-label">Soins et services</p>
+              <h3 class="service-name">{{ s.nom }}</h3>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-white py-4">
+          <p class="mb-0">Ajoutez des services dans l’administration pour les afficher ici (Prothèse, Parodontie, Blanchiment, Chirurgie, etc.).</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- Boutons flottants Appel / WhatsApp -->
+  <a href="tel:+212620678754" class="btn-float-phone" aria-label="Appeler">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+  </a>
+  <a href="https://wa.me/212620678754" target="_blank" rel="noopener" class="btn-float-whatsapp" aria-label="WhatsApp">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.865 9.865 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  </a>
+
+  <!-- Footer -->
+  <footer class="footer-public" id="contact">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <img src="{% static 'rdv/images/logo-dent.png' %}" alt="Cabinet dentaire" height="40">
+          </div>
+          <p class="small text-secondary">Cabinet multidisciplinaire pour l’ensemble des soins : consultation, parodontie, soins conservateurs, prothèse et esthétique dentaire.</p>
+        </div>
+        <div class="col-lg-2 mb-4">
+          <span class="footer-title">Liens utiles</span>
+          <ul class="list-unstyled">
+            <li><a href="{% url 'accueil' %}#accueil">Accueil</a></li>
+            <li><a href="{% url 'accueil' %}#centre">Centre dentaire</a></li>
+            <li><a href="{% url 'accueil' %}#services">Soins et services</a></li>
+            <li><a href="{% url 'accueil' %}#contact">Contact</a></li>
+            {% if request.user.is_authenticated %}<li><a href="{% url 'rdv_list' %}">Mes rendez-vous</a></li>{% endif %}
+          </ul>
+        </div>
+        <div class="col-lg-3 mb-4">
+          <span class="footer-title">Soins & services</span>
+          <ul class="list-unstyled small">
+            <li>Consultation & détartrage</li>
+            <li>Soins des caries</li>
+            <li>Prothèse dentaire</li>
+            <li>Blanchiment dentaire</li>
+            <li>Esthétique dentaire</li>
+          </ul>
+        </div>
+        <div class="col-lg-3 mb-4">
+          <span class="footer-title">Trouvez-nous</span>
+          <p class="small text-secondary mb-1">+212 (0) XXX XX XX XX</p>
+          <p class="small text-secondary mb-1">contact@cabinet-dentaire.ma</p>
+          <p class="small text-secondary mb-0">Adresse du cabinet</p>
+        </div>
+      </div>
+      <hr class="border-secondary my-3">
+      <p class="small text-secondary text-center mb-0">© Cabinet Dentaire — Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

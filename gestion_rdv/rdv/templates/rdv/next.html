@@ -1,0 +1,32 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}Prochain rendez-vous — Cabinet Dentaire{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Prochain rendez-vous dentaire</h1>
+</div>
+
+{% if next %}
+  <div class="next-rdv-card card-custom">
+    <div class="card-body">
+      <div class="d-flex gap-2 mb-2">
+        <span class="badge badge-custom badge-{% if next.priority == 'urgent' %}urgent{% else %}normal{% endif %}">{{ next.priority }}</span>
+        <span class="badge badge-custom badge-{{ next.status }}">{{ next.status }}</span>
+      </div>
+      <h5 class="card-title mb-2" style="font-size: 1.35rem;">{{ next.titre }}</h5>
+      <p class="text-muted mb-3">{{ next.date }}</p>
+      {% if next.description %}
+        <p class="card-text mb-3">{{ next.description }}</p>
+      {% endif %}
+      <p class="text-muted-custom small mb-0">Utilisateur : {{ next.utilisateur.username }}</p>
+    </div>
+  </div>
+{% else %}
+  <div class="empty-state card-custom">
+    <div class="empty-state-icon">✓</div>
+    <p class="mb-3">Pas de rendez-vous en attente.</p>
+    <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre rendez-vous</a>
+  </div>
+{% endif %}
+{% endblock %}

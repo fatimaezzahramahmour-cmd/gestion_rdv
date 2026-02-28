@@ -1,0 +1,14 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}Extranet — Cabinet Dentaire{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Bienvenue au cabinet dentaire</h1>
+</div>
+
+<div class="card-custom welcome-card">
+  <p class="mb-3">Rôle : <strong>{{ role }}</strong></p>
+  <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'logout' %}">Déconnexion</a>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}File d'attente — Cabinet Dentaire{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">File d'attente</h1>
+  <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'rdv_list' %}">← Mes rendez-vous</a>
+</div>
+
+{% if queue_entries %}
+  <p class="text-muted mb-4">Ordre de passage : patient numéro 1, 2, 3… Vous verrez votre position.</p>
+  <div class="rdv-list">
+    {% for entry in queue_entries %}
+      <div class="rdv-item card-custom {% if entry.is_me %}border-success border-2{% endif %}">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+          <div>
+            <h5 class="rdv-item-title mb-1">Patient numéro {{ entry.position }} : {{ entry.label }}</h5>
+            <span class="rdv-item-date">{{ entry.rdv.date }}</span>
+            {% if entry.rdv.titre %}<span class="text-muted"> — {{ entry.rdv.titre }}</span>{% endif %}
+          </div>
+          <div class="d-flex gap-1 flex-wrap align-items-center">
+            {% if entry.is_me %}<span class="badge bg-success">C'est vous</span>{% endif %}
+            <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% else %}normal{% endif %}">{{ entry.rdv.priority }}</span>
+          </div>
+        </div>
+        {% if entry.rdv.service %}
+          <p class="rdv-item-meta mb-0 mt-2"><strong>Acte:</strong> {{ entry.rdv.service.nom }}</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state card-custom">
+    <div class="empty-state-icon"></div>
+    <p class="mb-3">Aucun rendez-vous en attente dans la file.</p>
+    <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre rendez-vous</a>
+  </div>
+{% endif %}
+{% endblock %}

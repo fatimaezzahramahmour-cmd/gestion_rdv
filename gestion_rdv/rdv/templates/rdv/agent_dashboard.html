@@ -1,0 +1,85 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}Accueil — Cabinet Dentaire{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Bienvenue — Accueil agent</h1>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <a class="btn btn-outline-success btn-custom" href="{% url 'agent_file_attente' %}">File d'attente</a>
+    <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-custom btn-primary-custom">Appeler le patient suivant</button>
+    </form>
+  </div>
+</div>
+
+{% if messages %}
+  <div class="mb-3">
+    {% for m in messages %}
+      <div class="alert alert-success alert-custom mb-2">{{ m }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if prochain %}
+  <div class="card-custom p-4 mb-4" style="border-left: 4px solid var(--color-accent);">
+    <h5 class="mb-2">Prochain patient à appeler</h5>
+    <p class="mb-1"><strong>{{ prochain.titre }}</strong> — {{ prochain.date }}</p>
+    <p class="text-muted small mb-2">{{ prochain.utilisateur.username }}{% if prochain.service %} — {{ prochain.service.nom }}{% endif %}</p>
+    <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-custom btn-primary-custom btn-sm">Appeler ce patient</button>
+    </form>
+  </div>
+{% endif %}
+
+<div class="card-custom p-4">
+  <h5 class="mb-3 fw-semibold">Rendez-vous du jour</h5>
+  {% if rdv_du_jour %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Heure</th>
+            <th>Motif</th>
+            <th>Patient</th>
+            <th>Acte</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rdv_du_jour %}
+            <tr>
+              <td>{{ r.date|time:"H:i" }}</td>
+              <td>{{ r.titre }}</td>
+              <td>{{ r.utilisateur.username }}</td>
+              <td>{% if r.service %}{{ r.service.nom }}{% else %}—{% endif %}</td>
+              <td>
+                <span class="badge badge-custom badge-{{ r.status }}">{{ r.status }}</span>
+              </td>
+              <td>
+                {% if r.status != 'done' and r.status != 'cancelled' %}
+                  <form method="post" action="{% url 'rdv_valider' r.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success me-1">Valider</button>
+                  </form>
+                  <form method="post" action="{% url 'rdv_annuler' r.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>
+                  </form>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-muted mb-0">Aucun rendez-vous aujourd'hui.</p>
+  {% endif %}
+</div>
+{% endblock %}

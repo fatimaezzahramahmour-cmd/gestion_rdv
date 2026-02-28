@@ -1,0 +1,55 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}Tableau de bord — Cabinet Dentaire{% endblock %}
+
+{% block content %}
+  <h1 class="page-title">Tableau de bord</h1>
+  <div class="row mb-4 g-3">
+    <div class="col-md-3">
+      <div class="card text-white bg-primary mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Total RDV</h5>
+          <p class="card-text display-6">{{ total }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-white bg-warning mb-3">
+        <div class="card-body">
+          <h5 class="card-title">Urgent</h5>
+          <p class="card-text display-6">{{ urgent_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">By status</h5>
+          <ul class="list-unstyled">
+            {% for s in by_status %}
+              <li>{{ s.status }}: <strong>{{ s.count }}</strong></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="h5 mt-4 mb-3" style="color: var(--text-dark);">Rendez-vous à venir (7 jours)</h2>
+  {% if upcoming %}
+    <ul class="list-group">
+      {% for r in upcoming %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ r.titre }}</strong><br>
+            <small class="text-muted">{{ r.date }} — {{ r.utilisateur.username }}</small>
+          </div>
+          <span class="badge bg-secondary">{{ r.priority }} / {{ r.status }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">Aucun rendez-vous prévu cette semaine.</p>
+  {% endif %}
+
+{% endblock %}

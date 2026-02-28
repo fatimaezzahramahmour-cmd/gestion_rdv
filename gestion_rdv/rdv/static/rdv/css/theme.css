@@ -1,0 +1,236 @@
+/* ===== Cabinet Dentaire — Thème unique (site complet) ===== */
+/* Alwan: zr9 (bleu tswira) + khder (vert déjà f site) */
+:root {
+  --dental-green: #1a7f37;
+  --dental-green-light: #2ecc71;
+  --dental-green-dark: #146b2d;
+  --dental-blue: #2F80ED;
+  --dental-blue-dark: #2563eb;
+  --dental-blue-light: #60a5fa;
+  --text-dark: #1a1a2e;
+  --text-muted: #5a6c7d;
+  --bg-body: #f7fafc;
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 4px 20px rgba(26, 31, 46, 0.08);
+  --shadow-lg: 0 10px 40px rgba(26, 31, 46, 0.12);
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-body);
+  color: var(--text-dark);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ===== Navbar (thème dentaire) ===== */
+.navbar-dental {
+  background: var(--bg-card) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  padding: 0.6rem 0;
+}
+
+.navbar-dental .navbar-brand {
+  font-weight: 700;
+  color: var(--text-dark) !important;
+  font-size: 1.25rem;
+}
+
+.navbar-dental .navbar-brand .logo-text { line-height: 1.2; }
+
+.navbar-dental .nav-link {
+  color: var(--text-dark) !important;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 6px;
+}
+
+.navbar-dental .nav-link:hover {
+  color: var(--dental-blue) !important;
+  background: rgba(47, 128, 237, 0.08);
+}
+
+.btn-dental {
+  background: var(--dental-green);
+  color: #fff !important;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  transition: background .2s;
+}
+
+.btn-dental:hover {
+  background: var(--dental-green-dark);
+  color: #fff;
+}
+
+.btn-dental-outline {
+  background: transparent !important;
+  color: var(--dental-green) !important;
+  border: 2px solid var(--dental-green);
+}
+.btn-dental-outline:hover {
+  background: rgba(26, 127, 55, 0.08) !important;
+  color: var(--dental-green-dark) !important;
+  border-color: var(--dental-green-dark);
+}
+
+/* ===== Cards & content ===== */
+.card, .card-custom {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card .card-body { padding: 1.25rem; }
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0;
+}
+
+/* ===== Buttons ===== */
+.btn-primary-custom, .btn-custom.btn-primary-custom {
+  background: var(--dental-green);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  border-radius: var(--radius);
+  padding: 0.6rem 1.25rem;
+}
+
+.btn-primary-custom:hover {
+  background: var(--dental-green-dark);
+  color: #fff;
+}
+
+.btn-secondary-custom {
+  background: var(--bg-body);
+  color: var(--text-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+
+.btn-success-custom {
+  background: var(--dental-green);
+  color: #fff;
+  border-radius: var(--radius);
+}
+
+.btn-success-custom:hover { background: var(--dental-green-dark); color: #fff; }
+
+/* ===== Forms ===== */
+.form-custom .form-control,
+.form-custom input[type="text"],
+.form-custom input[type="email"],
+.form-custom input[type="password"],
+.form-custom input[type="datetime-local"],
+.form-custom textarea,
+.form-custom select {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.6rem 1rem;
+}
+
+.form-custom .form-control:focus,
+.form-custom input:focus,
+.form-custom textarea:focus,
+.form-custom select:focus {
+  border-color: var(--dental-blue);
+  box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.15);
+  outline: none;
+}
+
+.form-label { font-weight: 500; color: var(--text-dark); }
+
+/* ===== RDV list ===== */
+.rdv-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--shadow);
+}
+
+.rdv-item-title { font-weight: 600; color: var(--text-dark); }
+.rdv-item-date, .rdv-item-meta { color: var(--text-muted); font-size: 0.9rem; }
+
+.badge-custom {
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+}
+
+.badge-urgent { background: #fef3c7; color: #b45309; }
+.badge-normal { background: #d1fae5; color: #047857; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-confirmed { background: #d1fae5; color: #047857; }
+.badge-done { background: #dbeafe; color: #1d4ed8; }
+.badge-cancelled { background: #fee2e2; color: #b91c1c; }
+
+/* ===== Login / Signup ===== */
+.login-wrapper {
+  min-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.login-card, .card-custom.welcome-card {
+  max-width: 420px;
+  width: 100%;
+  padding: 2rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+}
+
+.login-title { font-size: 1.5rem; font-weight: 700; text-align: center; margin-bottom: 1.5rem; }
+
+/* ===== Alerts ===== */
+.alert-warning-custom { background: #fef3c7; color: #92400e; border-radius: var(--radius); }
+.alert-custom { border-radius: var(--radius); border: none; }
+
+/* ===== Empty state ===== */
+.empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.6; }
+
+/* ===== Tables (agent dashboard) ===== */
+.table th { color: var(--text-dark); font-weight: 600; }
+.table-hover tbody tr:hover { background: rgba(47, 128, 237, 0.06); }
+
+/* ===== Footer app ===== */
+.text-muted-custom { color: var(--text-muted); }
+
+/* ===== Admin dashboard cards ===== */
+.card.text-white.bg-primary { background: linear-gradient(135deg, var(--dental-green) 0%, var(--dental-green-dark) 100%) !important; border: none; border-radius: var(--radius-lg); }
+.card.text-white.bg-warning { background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important; border: none; border-radius: var(--radius-lg); }
+.card .card-title { font-weight: 700; }
+.list-group-item { border-radius: var(--radius) !important; }
+
+@media (max-width: 768px) {
+  .page-header { flex-direction: column; align-items: stretch; }
+}

@@ -1,0 +1,68 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Cabinet Dentaire{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{% static 'rdv/css/theme.css' %}" rel="stylesheet">
+  <style>
+    :root { --dental-green: #1a7f37; --dental-green-dark: #146b2d; --dental-blue: #2F80ED; --dental-blue-dark: #2563eb; --nav-blue: #1a365d; --text-dark: #1a1a2e; }
+    .navbar-public { background: #fff !important; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .navbar-public .navbar-brand { font-weight: 700; color: var(--nav-blue); }
+    .navbar-public .navbar-brand .brand-sub { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--nav-blue); opacity: .9; display: block; line-height: 1.2; }
+    .navbar-public .navbar-brand .brand-main { font-size: 1.1rem; font-weight: 700; color: var(--nav-blue); display: block; line-height: 1.2; }
+    .navbar-public .nav-center .nav-link { color: var(--dental-green) !important; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .03em; padding: 0.5rem 0.75rem; }
+    .navbar-public .nav-center .nav-link:hover { color: var(--dental-green-dark) !important; }
+    .navbar-public .nav-right .nav-link { color: var(--dental-green) !important; font-weight: 500; }
+    .navbar-public .nav-right .nav-link:hover { color: var(--dental-green-dark) !important; }
+    .btn-connexion { background: transparent; color: var(--dental-green) !important; border: none; font-weight: 600; padding: 8px 12px; }
+    .btn-connexion:hover { color: var(--dental-green-dark) !important; }
+    .btn-rdv { background: var(--dental-green); color: #fff !important; border-radius: 6px; padding: 8px 20px; font-weight: 600; border: none; text-transform: uppercase; letter-spacing: .03em; }
+    .btn-rdv:hover { background: var(--dental-green-dark); color: #fff; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light navbar-public py-3">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'accueil' %}">
+        <img src="https://i.pinimg.com/736x/9c/87/99/9c879909741ebaa6b7a614071079e542.jpg"
+             alt="Centre dentaire" height="52" class="d-block rounded-circle">
+        <span>
+          <span class="brand-sub">Centre Dentaire</span>
+          <span class="brand-main">Cabinet dentaire</span>
+        </span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMain">
+        <ul class="navbar-nav nav-center mx-auto mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#accueil">Accueil</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#centre">Centre dentaire</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#services">Soins et services</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#contact">Contact</a></li>
+        </ul>
+        <ul class="navbar-nav nav-right align-items-center gap-1">
+          {% if request.user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'rdv_list' %}">Mes rendez-vous</a></li>
+            <li class="nav-item"><a class="btn btn-connexion" href="{% url 'logout' %}">Déconnexion</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link btn btn-connexion" href="{% url 'login' %}">Se connecter</a></li>
+            <li class="nav-item"><a class="btn btn-rdv" href="{% url 'signup' %}">RDV +</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

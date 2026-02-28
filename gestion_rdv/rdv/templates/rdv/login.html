@@ -1,0 +1,34 @@
+{% extends 'rdv/base_public.html' %}
+
+{% block title %}Connexion — Cabinet Dentaire{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+  <div class="login-card card-custom">
+    <h1 class="login-title">Connexion</h1>
+    {% if messages %}
+      <div class="alert alert-warning alert-custom alert-warning-custom mb-4">
+        {% for m in messages %}{{ m }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+      </div>
+    {% endif %}
+    <form method="post" class="form-custom">
+      {% csrf_token %}
+      <div class="form-group mb-3">
+        <label class="form-label" for="id_email">Email</label>
+        <input class="form-control" type="email" name="email" id="id_email" placeholder="votre@email.com" required>
+      </div>
+      <div class="form-group mb-4">
+        <label class="form-label" for="id_password">Mot de passe</label>
+        <input class="form-control" type="password" name="password" id="id_password" placeholder="••••••••" required>
+      </div>
+      <button class="btn btn-primary btn-custom btn-primary-custom w-100 py-2" type="submit">Se connecter</button>
+    </form>
+    <div class="mt-3 text-center">
+      <small>Pas de compte ? <a href="{% url 'signup' %}">Créer un compte</a></small>
+    </div>
+    <div class="mt-2 text-center">
+      <small><a href="{% url 'accueil' %}">← Retour à l'accueil</a></small>
+    </div>
+  </div>
+</div>
+{% endblock %}
