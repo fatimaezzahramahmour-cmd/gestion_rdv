@@ -69,6 +69,13 @@ class CreneauHoraire(models.Model):
 
 
 class RendezVousManager(models.Manager):
+    def _queue_order(self, qs):
+        return qs.order_by(
+            models.Case(models.When(priority='urgent', then=0), default=1),
+            'date',
+            'created_at',
+        )
+
     def next_in_queue(self, user=None):
         """Return the next Rendez_vous object for the queue."""
         qs = self.filter(status='pending')
@@ -76,8 +83,24 @@ class RendezVousManager(models.Manager):
             profile = getattr(user, 'profile', None)
             if profile and profile.role != 'admin':
                 qs = qs.filter(utilisateur=user)
-        qs = qs.order_by(models.Case(models.When(priority='urgent', then=0), default=1), 'date', 'created_at')
-        return qs.first()
+        return self._queue_order(qs).first()
+
+    def next_in_queue_agent_global(self):
+        """Prochain pending : d’abord les RDV dont la date est « aujourd’hui » au cabinet, sinon file globale."""
+        from datetime import datetime, time, timedelta
+        from django.conf import settings as dj_settings
+        from django.utils import timezone as dj_tz
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo(str(dj_settings.TIME_ZONE))
+        today = dj_tz.localtime(dj_tz.now(), tz).date()
+        start = datetime.combine(today, time.min, tzinfo=tz)
+        end = datetime.combine(today + timedelta(days=1), time.min, tzinfo=tz)
+        qs = self.filter(status='pending')
+        hit = self._queue_order(qs.filter(date__gte=start, date__lt=end)).first()
+        if hit:
+            return hit
+        return self._queue_order(qs).first()
 
 
 class Rendez_vous(models.Model):
@@ -97,8 +120,9 @@ class Rendez_vous(models.Model):
     )
 
     PRIORITY_CHOICES = (
-        ('normal', 'Normal'),
+        ('normal', 'Cas ordinaire'),
         ('urgent', 'Urgent'),
+        ('control', 'Contrôle'),
     )
 
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -170,6 +194,7 @@ class FileAttente(models.Model):
     PRIORITY_CHOICES = (
         ('normal', 'Normal'),
         ('urgent', 'Urgent'),
+        ('control', 'Contrôle'),
     )
     rendez_vous = models.OneToOneField(
         'Rendez_vous', on_delete=models.CASCADE, null=True, blank=True, related_name='ticket'

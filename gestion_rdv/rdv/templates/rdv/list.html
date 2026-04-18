@@ -1,47 +1,73 @@
 {% extends 'rdv/base.html' %}
 
-{% block title %}Mes rendez-vous dentaires — Cabinet Dentaire{% endblock %}
+{% block title %}Mes rendez-vous — Cabinet Dentaire{% endblock %}
+
+{% block body_extra_class %}page-mes-rdv{% endblock %}
+
+{% block extra_css_espace %}
+.page-mes-rdv .rdv-item { border-left: 3px solid #15803d; padding: 1.35rem 1.5rem; }
+.page-mes-rdv .page-title { margin-bottom: 0.3rem; }
+.page-mes-rdv .page-header .text-muted { font-size: 0.9375rem; line-height: 1.5; }
+.page-mes-rdv .rdv-actions .btn { font-size: 0.8125rem; }
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">Mes rendez-vous dentaires</h1>
-  <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">+ Prendre rendez-vous</a>
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h1 class="page-title">Mes rendez-vous</h1>
+    <p class="text-muted small mb-0 mt-1">Vos rendez-vous au cabinet. Annulation ou changement de créneau possibles jusqu’à <strong>24 h avant</strong> l’horaire prévu.</p>
+  </div>
+  <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre un rendez-vous</a>
 </div>
 
-{% if items %}
+{% if item_rows %}
   <div class="rdv-list">
-    {% for r in items %}
-      <div class="rdv-item card-custom">
+    {% for row in item_rows %}
+      {% with r=row.rdv %}
+      <div class="rdv-item card-custom p-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
           <div>
-            <h5 class="rdv-item-title">{{ r.titre }}</h5>
-            <span class="rdv-item-date">{{ r.date }}</span>
+            <h5 class="rdv-item-title mb-1">{{ r.titre }}</h5>
+            <span class="rdv-item-date text-muted">{{ r.date }}</span>
           </div>
-          <div class="d-flex gap-1 flex-wrap">
-            <span class="badge badge-custom badge-{% if r.priority == 'urgent' %}urgent{% else %}normal{% endif %}">{{ r.priority }}</span>
+          <div class="d-flex gap-1 flex-wrap align-items-center">
+            <span class="badge badge-custom badge-{% if r.priority == 'urgent' %}urgent{% elif r.priority == 'control' %}control{% else %}normal{% endif %}">{{ r.get_priority_display }}</span>
             <span class="badge badge-custom badge-{{ r.status }}">{{ r.status }}</span>
           </div>
         </div>
         {% if r.service %}
-          <p class="rdv-item-meta mb-0"><strong>Acte:</strong> {{ r.service.nom }}</p>
+          <p class="rdv-item-meta mb-0 mt-2"><strong>Acte :</strong> {{ r.service.nom }}</p>
         {% endif %}
         {% if r.description %}
-          <p class="rdv-item-desc mb-0 mt-2">{{ r.description }}</p>
+          <p class="rdv-item-desc mb-0 mt-2 text-muted small">{{ r.description }}</p>
         {% endif %}
-        <p class="rdv-item-meta mb-0 mt-2">
-          Patient : {{ r.utilisateur.username }}
-          {% if r.status == 'pending' and r.queue_position %}
-            — <strong>Position file d'attente : {{ r.queue_position }}</strong>
-          {% endif %}
-        </p>
+        {% if r.status == 'pending' and r.queue_position %}
+          <p class="rdv-item-meta mb-0 mt-2 small"><strong>Position en file d'attente :</strong> {{ r.queue_position }}</p>
+        {% endif %}
+        {% if row.peut_gerer %}
+        <div class="rdv-actions d-flex flex-wrap gap-2 mt-3 pt-2 border-top border-light">
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'rdv_patient_modifier' r.pk %}">Modifier le créneau</a>
+          <form method="post" action="{% url 'rdv_patient_annuler' r.pk %}" class="d-inline" onsubmit="return confirm('Annuler définitivement ce rendez-vous ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm">Annuler le rendez-vous</button>
+          </form>
+        </div>
+        {% elif r.status == 'pending' or r.status == 'confirmed' %}
+        <p class="text-muted small mb-0 mt-3 pt-2 border-top">Moins de 24 h avant ce rendez-vous : pour toute modification ou annulation, contactez le cabinet par téléphone.</p>
+        {% endif %}
       </div>
+      {% endwith %}
     {% endfor %}
   </div>
 {% else %}
-  <div class="empty-state card-custom">
-    <div class="empty-state-icon"></div>
-    <p class="mb-3">Aucun rendez-vous pour le moment.</p>
-    <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre rendez-vous</a>
+  <div class="empty-state card-custom text-center py-5 px-4">
+    <div class="mb-3" style="font-size: 3rem; color: #15803d; opacity: 0.75;">📅</div>
+    <h3 class="h5 text-dark mb-2">Aucun rendez-vous pour le moment</h3>
+    <p class="text-muted small mb-4">Prenez votre premier rendez-vous en quelques clics. Choisissez le jour, l’heure et le type de soin.</p>
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+      <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre un rendez-vous</a>
+      <a class="btn btn-outline-secondary" href="{% url 'file_attente' %}">Voir la file d'attente</a>
+    </div>
   </div>
 {% endif %}
 {% endblock %}

@@ -1,14 +1,24 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST, require_GET
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import Utilisateur, Statistique, Service
-from .forms import RendezVousForm
-from .models import Rendez_vous
+from .forms import (
+    RendezVousForm,
+    get_creneaux_for_date,
+    get_creneaux_table_semaine,
+    patient_peut_modifier_ou_annuler,
+    cabinet_local_today,
+    cabinet_day_datetime_bounds,
+)
+from .models import Rendez_vous, FileAttente
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count
 from django.utils import timezone
+from django.conf import settings as dj_settings
+from zoneinfo import ZoneInfo
 from datetime import timedelta
 
 
@@ -54,13 +64,35 @@ def agent_dashboard(request):
 	if not _is_agent(request.user):
 		return redirect('extranet')
 
-	today = timezone.now().date()
-	rdv_du_jour = Rendez_vous.objects.filter(date__date=today).exclude(status='cancelled').order_by('date')
-	prochain = Rendez_vous.objects.next_in_queue(user=None)  # Global queue for agent
+	today = cabinet_local_today()
+	start_day, end_day = cabinet_day_datetime_bounds(today)
+	rdv_du_jour = (
+		Rendez_vous.objects.filter(date__gte=start_day, date__lt=end_day)
+		.exclude(status='cancelled')
+		.order_by('date')
+	)
+	prochain = Rendez_vous.objects.next_in_queue_agent_global()
+	en_attente_count = Rendez_vous.objects.filter(status='pending').count()
+
+	rdv_du_jour_with_names = [{'rdv': r, 'patient_name': _patient_display_name(r.utilisateur) or r.utilisateur.username} for r in rdv_du_jour]
+	prochain_name = _patient_display_name(prochain.utilisateur) if prochain else None
+	tz_cab = ZoneInfo(str(dj_settings.TIME_ZONE))
+	prochain_date_cabinet = (
+		timezone.localtime(prochain.date, tz_cab).date() if prochain else None
+	)
+	prochain_pas_aujourdhui = bool(
+		prochain and prochain_date_cabinet and prochain_date_cabinet != today
+	)
 
 	context = {
-		'rdv_du_jour': rdv_du_jour,
+		'rdv_du_jour': rdv_du_jour_with_names,
+		'rdv_du_jour_list': rdv_du_jour,
 		'prochain': prochain,
+		'prochain_name': prochain_name,
+		'count_rdv_jour': rdv_du_jour.count(),
+		'en_attente_count': en_attente_count,
+		'date_jour_label': today.strftime('%d/%m/%Y'),
+		'prochain_pas_aujourdhui': prochain_pas_aujourdhui,
 	}
 	return render(request, 'rdv/agent_dashboard.html', context)
 
@@ -71,7 +103,7 @@ def agent_appeler_prochain(request):
 	"""Appel du prochain ticket: afficher et marquer confirmé."""
 	if not _is_agent(request.user):
 		return redirect('extranet')
-	next_obj = Rendez_vous.objects.next_in_queue(user=None)
+	next_obj = Rendez_vous.objects.next_in_queue_agent_global()
 	if next_obj:
 		next_obj.status = 'confirmed'
 		next_obj.save()
@@ -151,18 +183,40 @@ def logout_view(request):
 def extranet(request):
 	profile = getattr(request.user, 'profile', None)
 	role = profile.role if profile else 'user'
-	return render(request, 'rdv/extranet.html', {'role': role})
+	display = ''
+	try:
+		display = (getattr(request.user.patient_profile, 'nom', None) or '').strip()
+	except Exception:
+		pass
+	if not display and profile and getattr(profile, 'nom', None):
+		display = (profile.nom or '').strip()
+	if not display:
+		display = (request.user.get_full_name() or '').strip()
+	return render(request, 'rdv/extranet.html', {'role': role, 'user_display_name': display})
 
 
 @login_required
 def rdv_list(request):
-	# list rendez-vous for current user (admin sees all)
 	profile = getattr(request.user, 'profile', None)
 	if profile and profile.role == 'admin':
 		items = Rendez_vous.objects.all().order_by('-date')
+		item_rows = [{'rdv': r, 'peut_gerer': False} for r in items]
 	else:
 		items = Rendez_vous.objects.filter(utilisateur=request.user).order_by('-date')
-	return render(request, 'rdv/list.html', {'items': items})
+		item_rows = [{'rdv': r, 'peut_gerer': patient_peut_modifier_ou_annuler(r)} for r in items]
+	return render(request, 'rdv/list.html', {'items': items, 'item_rows': item_rows})
+
+
+@login_required
+@login_required
+@require_GET
+def rdv_creneaux_api(request):
+	"""Retourne les créneaux disponibles pour une date (GET ?date=YYYY-MM-DD)."""
+	date_str = request.GET.get('date', '')
+	if not date_str:
+		return JsonResponse({'creneaux': []})
+	creneaux = get_creneaux_for_date(date_str)
+	return JsonResponse({'creneaux': creneaux})
 
 
 @login_required
@@ -177,7 +231,91 @@ def rdv_create(request):
 			return redirect('rdv_list')
 	else:
 		form = RendezVousForm()
-	return render(request, 'rdv/create.html', {'form': form})
+	creneaux_table = get_creneaux_table_semaine()
+	now = timezone.now()
+	return render(
+		request,
+		'rdv/create.html',
+		{
+			'form': form,
+			'creneaux_table': creneaux_table,
+			'booking_server_now_ms': int(now.timestamp() * 1000),
+			'edit_mode': False,
+		},
+	)
+
+
+@login_required
+@require_POST
+def rdv_patient_annuler(request, pk):
+	profile = getattr(request.user, 'profile', None)
+	if profile and profile.role in ('agent', 'admin'):
+		messages.error(request, 'Utilisez l’espace réception pour gérer les rendez-vous.')
+		return redirect('extranet')
+	rdv = get_object_or_404(Rendez_vous, pk=pk, utilisateur=request.user)
+	if not patient_peut_modifier_ou_annuler(rdv):
+		messages.error(
+			request,
+			'Annulation impossible : il faut au moins 24 h avant le rendez-vous, ou le RDV est déjà terminé / annulé.',
+		)
+		return redirect('rdv_list')
+	FileAttente.objects.filter(rendez_vous=rdv).delete()
+	rdv.status = 'cancelled'
+	rdv.save()
+	messages.success(request, 'Votre rendez-vous a été annulé.')
+	return redirect('rdv_list')
+
+
+@login_required
+def rdv_patient_modifier(request, pk):
+	from datetime import datetime as dt_module
+
+	profile = getattr(request.user, 'profile', None)
+	if profile and profile.role in ('agent', 'admin'):
+		messages.error(request, 'Action réservée aux patients.')
+		return redirect('extranet')
+	rdv = get_object_or_404(Rendez_vous, pk=pk, utilisateur=request.user)
+	if not patient_peut_modifier_ou_annuler(rdv):
+		messages.error(
+			request,
+			'Modification impossible : au moins 24 h avant le rendez-vous sont nécessaires.',
+		)
+		return redirect('rdv_list')
+	if request.method == 'POST':
+		form = RendezVousForm(request.POST, instance=rdv, exclude_rdv_pk=rdv.pk)
+		if form.is_valid():
+			form.save()
+			messages.success(request, 'Votre rendez-vous a été modifié.')
+			return redirect('rdv_list')
+	else:
+		form = RendezVousForm(instance=rdv, exclude_rdv_pk=rdv.pk)
+	creneaux_table = get_creneaux_table_semaine(
+		exclude_rdv_pk=rdv.pk,
+		extra_dates=[timezone.localtime(rdv.date).date()],
+	)
+	now = timezone.now()
+	iso = request.POST.get('date') if request.method == 'POST' else rdv.date.isoformat()
+	if not iso:
+		iso = rdv.date.isoformat()
+	try:
+		parsed = dt_module.fromisoformat(iso.replace('Z', '+00:00'))
+		if timezone.is_naive(parsed):
+			parsed = timezone.make_aware(parsed)
+		rdv_slot_label = timezone.localtime(parsed).strftime('%d/%m/%Y — %H:%M')
+	except Exception:
+		rdv_slot_label = timezone.localtime(rdv.date).strftime('%d/%m/%Y — %H:%M')
+	return render(
+		request,
+		'rdv/create.html',
+		{
+			'form': form,
+			'creneaux_table': creneaux_table,
+			'booking_server_now_ms': int(now.timestamp() * 1000),
+			'edit_mode': True,
+			'rdv_initial_iso': iso,
+			'rdv_slot_label': rdv_slot_label,
+		},
+	)
 
 
 @login_required
@@ -243,17 +381,21 @@ def admin_dashboard(request):
 
 
 def signup_view(request):
-	"""Simple signup to create a user with a role (admin/agent/user)."""
+	"""Simple signup to create a user with a role (admin/agent/user). Prénom et Nom pour le message Bienvenue."""
 	from django.contrib.auth.models import User
 	if request.method == 'POST':
+		first_name = (request.POST.get('first_name') or '').strip()
+		last_name = (request.POST.get('last_name') or '').strip()
 		email = request.POST.get('email')
 		password1 = request.POST.get('password1')
 		password2 = request.POST.get('password2')
-		# Signup only creates regular user accounts; admin/agent are fixed by admin scripts
 		role = 'user'
 
 		if not email or not password1:
 			messages.error(request, 'Email et mot de passe requis')
+			return render(request, 'rdv/signup.html')
+		if not first_name or not last_name:
+			messages.error(request, 'Prénom et nom requis')
 			return render(request, 'rdv/signup.html')
 		if password1 != password2:
 			messages.error(request, 'Les mots de passe ne correspondent pas')
@@ -263,8 +405,10 @@ def signup_view(request):
 			messages.info(request, 'Un compte avec cet email existe déjà. Connectez-vous.')
 			return redirect('login')
 
-		# Use email as username to avoid collisions
-		user = User.objects.create_user(username=email, email=email, password=password1)
+		user = User.objects.create_user(
+			username=email, email=email, password=password1,
+			first_name=first_name, last_name=last_name
+		)
 		# ensure profile exists (signal in models.py should create it)
 		profile = getattr(user, 'profile', None)
 		if profile:

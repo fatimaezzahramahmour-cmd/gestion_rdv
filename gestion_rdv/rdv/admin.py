@@ -45,7 +45,10 @@ class ServiceAdmin(admin.ModelAdmin):
 @admin.register(CreneauHoraire)
 class CreneauHoraireAdmin(admin.ModelAdmin):
 	list_display = ('jour', 'heure_debut', 'heure_fin', 'actif')
+	list_display_links = ('jour', 'heure_debut', 'heure_fin')
 	list_filter = ('jour', 'actif')
+	list_editable = ('actif',)
+	list_per_page = 25
 
 
 @admin.register(Rendez_vous)
@@ -89,4 +92,8 @@ class JourFermetureAdmin(admin.ModelAdmin):
 @admin.register(HoraireCabinet)
 class HoraireCabinetAdmin(admin.ModelAdmin):
 	list_display = ('jour', 'heure_ouverture', 'heure_fermeture', 'actif')
+	list_display_links = ('jour', 'heure_ouverture', 'heure_fermeture')
 	list_filter = ('jour', 'actif')
+	list_editable = ('actif',)
+	list_per_page = 25
+	fields = ('jour', 'heure_ouverture', 'heure_fermeture', 'actif')

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 260" width="520" height="260">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ecfdf5"/>
+      <stop offset="50%" style="stop-color:#d1fae5"/>
+      <stop offset="100%" style="stop-color:#a7f3d0"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#22c55e"/>
+      <stop offset="100%" style="stop-color:#15803d"/>
+    </linearGradient>
+  </defs>
+  <rect width="520" height="260" fill="url(#bg)" rx="12"/>
+  <ellipse cx="260" cy="115" rx="72" ry="56" fill="#fff" opacity="0.85"/>
+  <path d="M245 88c8-12 22-12 30 0 6 8 4 18-2 26-4 5-8 8-13 10-5-2-9-5-13-10-6-8-8-18-2-26z" fill="url(#leaf)" opacity="0.9"/>
+  <path d="M268 95c10-8 24-4 28 8 3 8-1 17-8 22-4 3-9 5-14 5-3-4-5-9-5-15 0-8 0-16-1-20z" fill="#166534" opacity="0.75"/>
+  <text x="260" y="198" text-anchor="middle" fill="#14532d" font-family="system-ui,Segoe UI,sans-serif" font-size="15" font-weight="700">Cabinet dentaire</text>
+  <text x="260" y="218" text-anchor="middle" fill="#15803d" font-family="system-ui,Segoe UI,sans-serif" font-size="12" font-weight="500" opacity="0.85">Soins &amp; rendez-vous</text>
+</svg>

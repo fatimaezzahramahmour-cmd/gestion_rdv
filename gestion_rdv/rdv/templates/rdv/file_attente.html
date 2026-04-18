@@ -2,39 +2,52 @@
 
 {% block title %}File d'attente — Cabinet Dentaire{% endblock %}
 
+{% block body_extra_class %}page-file-attente{% endblock %}
+
+{% block extra_css_espace %}
+.page-file-attente .rdv-item.border-success { border-left: 3px solid #15803d; background: linear-gradient(90deg, rgba(21,128,61,.06) 0%, transparent 100%); }
+.page-file-attente .rdv-item { padding: 1.25rem 1.5rem; }
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">File d'attente</h1>
-  <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'rdv_list' %}">← Mes rendez-vous</a>
+<div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <div>
+    <h1 class="page-title">File d'attente</h1>
+    <p class="text-muted small mb-0 mt-1">Ordre de passage au cabinet. Votre position s'affiche ci-dessous.</p>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'rdv_list' %}">← Mes rendez-vous</a>
 </div>
 
 {% if queue_entries %}
-  <p class="text-muted mb-4">Ordre de passage : patient numéro 1, 2, 3… Vous verrez votre position.</p>
   <div class="rdv-list">
     {% for entry in queue_entries %}
-      <div class="rdv-item card-custom {% if entry.is_me %}border-success border-2{% endif %}">
+      <div class="rdv-item card-custom p-4 {% if entry.is_me %}border-success border-2{% endif %}">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
           <div>
-            <h5 class="rdv-item-title mb-1">Patient numéro {{ entry.position }} : {{ entry.label }}</h5>
-            <span class="rdv-item-date">{{ entry.rdv.date }}</span>
+            <h5 class="rdv-item-title mb-1">Patient n°{{ entry.position }} — {{ entry.label }}</h5>
+            <span class="rdv-item-date text-muted">{{ entry.rdv.date }}</span>
             {% if entry.rdv.titre %}<span class="text-muted"> — {{ entry.rdv.titre }}</span>{% endif %}
           </div>
           <div class="d-flex gap-1 flex-wrap align-items-center">
             {% if entry.is_me %}<span class="badge bg-success">C'est vous</span>{% endif %}
-            <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% else %}normal{% endif %}">{{ entry.rdv.priority }}</span>
+            <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span>
           </div>
         </div>
         {% if entry.rdv.service %}
-          <p class="rdv-item-meta mb-0 mt-2"><strong>Acte:</strong> {{ entry.rdv.service.nom }}</p>
+          <p class="rdv-item-meta mb-0 mt-2"><strong>Acte :</strong> {{ entry.rdv.service.nom }}</p>
         {% endif %}
       </div>
     {% endfor %}
   </div>
 {% else %}
-  <div class="empty-state card-custom">
-    <div class="empty-state-icon"></div>
-    <p class="mb-3">Aucun rendez-vous en attente dans la file.</p>
-    <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre rendez-vous</a>
+  <div class="empty-state card-custom text-center py-5 px-4">
+    <div class="mb-3" style="font-size: 3rem; color: #15803d; opacity: 0.75;">⏱</div>
+    <h3 class="h5 text-dark mb-2">Aucun rendez-vous en attente</h3>
+    <p class="text-muted small mb-4">La file d'attente est vide pour le moment. Prenez un rendez-vous pour apparaître dans la file et suivre votre position.</p>
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+      <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre un rendez-vous</a>
+      <a class="btn btn-outline-secondary" href="{% url 'rdv_list' %}">Mes rendez-vous</a>
+    </div>
   </div>
 {% endif %}
 {% endblock %}

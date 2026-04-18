@@ -11,7 +11,7 @@
   <div class="next-rdv-card card-custom">
     <div class="card-body">
       <div class="d-flex gap-2 mb-2">
-        <span class="badge badge-custom badge-{% if next.priority == 'urgent' %}urgent{% else %}normal{% endif %}">{{ next.priority }}</span>
+        <span class="badge badge-custom badge-{% if next.priority == 'urgent' %}urgent{% elif next.priority == 'control' %}control{% else %}normal{% endif %}">{{ next.get_priority_display }}</span>
         <span class="badge badge-custom badge-{{ next.status }}">{{ next.status }}</span>
       </div>
       <h5 class="card-title mb-2" style="font-size: 1.35rem;">{{ next.titre }}</h5>

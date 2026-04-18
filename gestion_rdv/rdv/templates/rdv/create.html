@@ -1,32 +1,254 @@
 {% extends 'rdv/base.html' %}
 
-{% block title %}Prendre rendez-vous — Cabinet Dentaire{% endblock %}
+{% block title %}{% if edit_mode %}Modifier le rendez-vous{% else %}Prendre un rendez-vous{% endif %} — Cabinet Dentaire{% endblock %}
+
+{% block body_extra_class %}page-rdv-create{% endblock %}
+
+{% block extra_css_espace %}
+.page-rdv-create .rdv-create-hero {
+  background: linear-gradient(135deg, rgba(21,128,61,.08) 0%, rgba(21,128,61,.03) 50%, #f8fafc 100%);
+  border-radius: var(--patient-radius, 16px);
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  border: 1px solid rgba(21,128,61,.1);
+}
+.page-rdv-create .rdv-create-hero-img {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 4px 16px rgba(21,128,61,.15);
+}
+.page-rdv-create .rdv-create-hero h1 { color: #15803d; font-weight: 700; font-size: 1.375rem; margin: 0 0 0.25rem 0; letter-spacing: -0.02em; }
+.page-rdv-create .rdv-create-hero p { color: #64748b; margin: 0; font-size: 0.9375rem; }
+.page-rdv-create .form-rdv-card {
+  background: #fff;
+  border-radius: var(--patient-radius, 18px);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06);
+  border: 1px solid #e2e8f0;
+  padding: 2.25rem;
+  max-width: 900px;
+}
+.page-rdv-create .form-rdv-card .form-label { font-weight: 600; color: #0f172a; margin-bottom: 0.4rem; font-size: 0.9375rem; }
+.page-rdv-create .form-group-creneau .form-label-small { font-size: 0.875rem; font-weight: 600; color: #64748b; margin-bottom: 0.35rem; display: block; }
+.page-rdv-create .form-rdv-card .form-control {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 0.6rem 1rem;
+  font-size: 0.9375rem;
+}
+.page-rdv-create .form-rdv-card .form-control:focus {
+  border-color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21,128,61,.1);
+  outline: none;
+}
+.page-rdv-create .form-rdv-card select.form-control { cursor: pointer; }
+.page-rdv-create .form-rdv-card textarea.form-control { min-height: 96px; resize: vertical; }
+.page-rdv-create .creneau-box {
+  display: inline-block;
+  padding: 0.45rem 0.75rem;
+  margin: 0.2rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color .2s, background .2s, color .2s;
+}
+.page-rdv-create .creneau-box:hover { border-color: #15803d; background: rgba(21,128,61,.06); }
+.page-rdv-create .creneau-box.selected { border-color: #15803d; background: #15803d; color: #fff; }
+.page-rdv-create .creneau-box.taken { background: #fef2f2; border-color: #fecaca; color: #b91c1c; cursor: not-allowed; }
+.page-rdv-create .creneau-box.taken:hover { background: #fef2f2; border-color: #fecaca; }
+.page-rdv-create .creneau-day { margin-bottom: 1rem; }
+.page-rdv-create .creneau-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+.page-rdv-create .creneau-table th, .page-rdv-create .creneau-table td { padding: 0.35rem 0.5rem; border: 1px solid #e2e8f0; text-align: center; }
+.page-rdv-create .creneau-table th { background: rgba(21,128,61,.06); font-weight: 600; color: #0f172a; }
+.page-rdv-create .creneau-table .cell-slot { min-width: 2.75rem; }
+.page-rdv-create .creneau-trigger {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 0.9375rem;
+  text-align: left;
+  cursor: pointer;
+  color: #0f172a;
+}
+.page-rdv-create .creneau-trigger:hover { border-color: #cbd5e1; }
+.page-rdv-create .creneau-trigger.placeholder { color: #94a3b8; }
+.page-rdv-create .creneau-dropdown {
+  position: absolute;
+  z-index: 100;
+  margin-top: 0.25rem;
+  max-width: 520px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12), 0 0 0 1px #e2e8f0;
+  padding: 0.75rem;
+}
+.page-rdv-create .creneau-dropdown .creneau-table { font-size: 0.8rem; }
+.page-rdv-create .creneau-dropdown .creneau-table th, .page-rdv-create .creneau-dropdown .creneau-table td { padding: 0.25rem 0.4rem; }
+.page-rdv-create .creneau-dropdown-wrap { position: relative; }
+.page-rdv-create .btn-confirm-rdv {
+  background: linear-gradient(180deg, #15803d 0%, #166534 100%);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.7rem 1.4rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.9375rem;
+  box-shadow: 0 2px 8px rgba(21, 128, 61, 0.25);
+}
+.page-rdv-create .btn-confirm-rdv:hover { background: linear-gradient(180deg, #166534 0%, #14532d 100%); color: #fff; box-shadow: 0 6px 18px rgba(21, 128, 61, 0.35); }
+.page-rdv-create .link-retour { color: #15803d; font-weight: 600; text-decoration: none; font-size: 0.9375rem; }
+.page-rdv-create .link-retour:hover { color: #166534; text-decoration: underline; }
+{% endblock %}
+
+{% block espace_intro %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">Prendre rendez-vous</h1>
-  <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'rdv_list' %}">← Retour</a>
-</div>
+<div class="page-rdv-create">
+  <a href="{% url 'rdv_list' %}" class="link-retour mb-3 d-inline-block">← Retour à mes rendez-vous</a>
 
-<div class="card-custom p-4" style="max-width: 600px;">
-  <form method="post" class="form-custom">
-    {% csrf_token %}
-    {% for field in form %}
-      <div class="form-group mb-3">
-        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% if field.help_text %}
-          <small class="text-muted d-block mt-1">{{ field.help_text }}</small>
-        {% endif %}
-        {% if field.errors %}
-          <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
-        {% endif %}
-      </div>
-    {% endfor %}
-    <div class="d-flex gap-2 mt-4">
-      <button class="btn btn-success btn-custom btn-success-custom" type="submit">Confirmer le rendez-vous</button>
-      <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'rdv_list' %}">Annuler</a>
+  <div class="rdv-create-hero">
+    <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400&q=85" alt="" class="rdv-create-hero-img">
+    <div>
+      <h1>{% if edit_mode %}Modifier mon rendez-vous{% else %}Prendre un rendez-vous{% endif %}</h1>
+      <p>{% if edit_mode %}Changez la date, l’heure ou les informations. Au moins 24 h avant le RDV.{% else %}Choisissez votre créneau et le type de soin. Confirmation rapide par notre équipe.{% endif %}</p>
     </div>
-  </form>
+  </div>
+
+  <div class="form-rdv-card">
+    <form method="post" class="form-custom" id="form-rdv">
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.name == 'date' %}
+        <div class="form-group form-group-creneau mb-4">
+          <label class="form-label form-label-small">{{ field.label }}</label>
+          <div class="creneau-dropdown-wrap">
+            <button type="button" class="creneau-trigger {% if not edit_mode %}placeholder{% endif %}" id="creneau-trigger" aria-haspopup="true" aria-expanded="false">{% if edit_mode %}{{ rdv_slot_label }}{% else %}--------- Choisir date et heure ---------{% endif %}</button>
+            <div class="creneau-dropdown" id="creneau-dropdown" role="dialog" aria-label="Choisir un créneau" hidden>
+              <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                <table class="creneau-table">
+                  <thead>
+                    <tr>
+                      {% for d in creneaux_table.days %}
+                      <th><span class="d-block">{{ d.label }}</span><span class="small text-muted">{{ d.date }}</span></th>
+                      {% endfor %}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in creneaux_table.rows %}
+                    <tr title="Créneau {{ row.time_display|default:row.time }}">
+                      {% for cell in row.cells %}
+                      <td class="cell-slot">
+                        {% if not cell %}
+                        —
+                        {% elif cell.available %}
+                        <button type="button" class="creneau-box" data-value="{{ cell.value|escape }}" data-label="{{ row.time_display|default:row.time }}" aria-pressed="false">{{ row.time_display|default:row.time }}</button>
+                        {% else %}
+                        <span class="creneau-box taken" title="Déjà pris">{{ row.time_display|default:row.time }}</span>
+                        {% endif %}
+                      </td>
+                      {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="{{ creneaux_table.days|length|default:5 }}" style="text-align: center; color: #94a3b8;">Aucun créneau configuré. Vérifiez les horaires en admin.</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="date" id="id_date" value="{% if edit_mode %}{{ rdv_initial_iso }}{% endif %}">
+          {% if not creneaux_table.rows %}
+          <small class="text-warning d-block mt-1">Aucun créneau configuré. Vérifiez les horaires cabinet en admin.</small>
+          {% endif %}
+          {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+        {% else %}
+        <div class="form-group mb-4">
+          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<small class="text-muted d-block mt-1">{{ field.help_text }}</small>{% endif %}
+          {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+      <div class="d-flex flex-wrap gap-3 mt-4 pt-2">
+        <button class="btn btn-confirm-rdv" type="submit">{% if edit_mode %}Enregistrer les modifications{% else %}Confirmer le rendez-vous{% endif %}</button>
+        <a class="btn btn-outline-secondary" href="{% url 'rdv_list' %}">Annuler</a>
+      </div>
+    </form>
+  </div>
+  <script>
+  (function() {
+    var SERVER_MS = {{ booking_server_now_ms|default:"0" }};
+    document.querySelectorAll('button.creneau-box[data-value]').forEach(function(btn) {
+      var ms = Date.parse(btn.getAttribute('data-value'));
+      if (!isNaN(ms) && SERVER_MS > 0 && ms <= SERVER_MS) {
+        var sp = document.createElement('span');
+        sp.className = 'creneau-box taken';
+        sp.setAttribute('title', 'Passé');
+        sp.textContent = '\u2014';
+        btn.parentNode.replaceChild(sp, btn);
+      }
+    });
+
+    var trigger = document.getElementById('creneau-trigger');
+    var dropdown = document.getElementById('creneau-dropdown');
+    var hidden = document.getElementById('id_date');
+    var boxes = document.querySelectorAll('button.creneau-box');
+
+    function openDropdown() {
+      if (!dropdown || !trigger) return;
+      dropdown.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+    }
+    function closeDropdown() {
+      if (!dropdown || !trigger) return;
+      dropdown.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    if (trigger) {
+      trigger.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (dropdown.hidden) openDropdown(); else closeDropdown();
+      });
+    }
+    document.addEventListener('click', function(e) {
+      if (dropdown && trigger && !dropdown.hidden && !dropdown.contains(e.target) && !trigger.contains(e.target))
+        closeDropdown();
+    });
+
+    if (hidden && boxes.length) {
+      boxes.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var value = this.getAttribute('data-value');
+          var label = this.getAttribute('data-label') || this.textContent;
+          hidden.value = value;
+          trigger.textContent = label;
+          trigger.classList.remove('placeholder');
+          boxes.forEach(function(b) { b.classList.remove('selected'); b.setAttribute('aria-pressed', 'false'); });
+          this.classList.add('selected');
+          this.setAttribute('aria-pressed', 'true');
+          closeDropdown();
+        });
+      });
+    }
+  })();
+  </script>
 </div>
 {% endblock %}

@@ -1,12 +1,43 @@
 {% extends 'rdv/base.html' %}
 
-{% block title %}Accueil — Cabinet Dentaire{% endblock %}
+{% block title %}Tableau de bord réception — Cabinet Dentaire{% endblock %}
+
+{% block body_extra_class %}page-agent-dashboard{% endblock %}
+
+{% block extra_css_espace %}
+.page-agent-dashboard .agent-hero { background: linear-gradient(135deg, rgba(21,128,61,.08) 0%, rgba(21,128,61,.03) 50%, #f8fafc 100%); border-radius: 16px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem; border: 1px solid rgba(21,128,61,.12); }
+.page-agent-dashboard .agent-hero h1 { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0; letter-spacing: -0.02em; }
+.page-agent-dashboard .agent-hero .agent-sub { color: #64748b; font-size: 0.9375rem; margin: 0; }
+.page-agent-dashboard .stats-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.page-agent-dashboard .stat-card { flex: 1; min-width: 140px; background: #fff; border-radius: 12px; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.page-agent-dashboard .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; color: #15803d; line-height: 1.2; }
+.page-agent-dashboard .stat-card .stat-label { font-size: 0.8125rem; color: #64748b; margin-top: 0.25rem; }
+.page-agent-dashboard .card-prochain { border-radius: 14px; border-left: 4px solid #15803d; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem; background: linear-gradient(90deg, rgba(21,128,61,.06) 0%, #fff 120px); }
+.page-agent-dashboard .card-prochain h3 { font-size: 0.875rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 0.5rem 0; }
+.page-agent-dashboard .card-prochain .prochain-name { font-size: 1.125rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+.page-agent-dashboard .card-prochain .prochain-meta { font-size: 0.875rem; color: #64748b; margin-bottom: 1rem; }
+.page-agent-dashboard .card-prochain .btn-appeler { background: linear-gradient(180deg, #15803d 0%, #166534 100%); color: #fff; font-weight: 600; padding: 0.6rem 1.25rem; border-radius: 10px; border: none; box-shadow: 0 2px 8px rgba(21,128,61,.25); }
+.page-agent-dashboard .card-prochain .btn-appeler:hover { background: linear-gradient(180deg, #166534 0%, #14532d 100%); color: #fff; }
+.page-agent-dashboard .card-rdv-jour { border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.page-agent-dashboard .card-rdv-jour .card-header { background: #f8fafc; padding: 1rem 1.25rem; font-weight: 700; font-size: 1rem; color: #0f172a; border-bottom: 1px solid #e2e8f0; }
+.page-agent-dashboard .card-rdv-jour .table { margin: 0; font-size: 0.875rem; }
+.page-agent-dashboard .card-rdv-jour .table th { padding: 0.75rem 1rem; background: #fafafa; font-weight: 600; color: #475569; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .03em; }
+.page-agent-dashboard .card-rdv-jour .table td { padding: 0.75rem 1rem; vertical-align: middle; }
+.page-agent-dashboard .card-rdv-jour .table tbody tr { border-bottom: 1px solid #f1f5f9; }
+.page-agent-dashboard .card-rdv-jour .table tbody tr:last-child { border-bottom: none; }
+.page-agent-dashboard .card-rdv-jour .btn-sm { font-size: 0.8125rem; padding: 0.35rem 0.65rem; border-radius: 6px; font-weight: 500; }
+.page-agent-dashboard .btn-file { background: #fff; color: #15803d; border: 1px solid rgba(21,128,61,.3); font-weight: 600; padding: 0.5rem 1rem; border-radius: 10px; }
+.page-agent-dashboard .btn-file:hover { background: rgba(21,128,61,.06); color: #166534; border-color: #15803d; }
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">Bienvenue — Accueil agent</h1>
+<div class="agent-hero d-flex flex-wrap justify-content-between align-items-start gap-3">
+  <div>
+    <h1>Tableau de bord réception</h1>
+    <p class="agent-sub">Gérez les rendez-vous du jour et la file d'attente. Appelez les patients dans l'ordre.</p>
+  </div>
   <div class="d-flex flex-wrap gap-2 align-items-center">
-    <a class="btn btn-outline-success btn-custom" href="{% url 'agent_file_attente' %}">File d'attente</a>
+    <a class="btn btn-file" href="{% url 'agent_file_attente' %}">Voir la file d'attente</a>
     <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
       {% csrf_token %}
       <button type="submit" class="btn btn-primary btn-custom btn-primary-custom">Appeler le patient suivant</button>
@@ -22,50 +53,67 @@
   </div>
 {% endif %}
 
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-value">{{ count_rdv_jour }}</div>
+    <div class="stat-label">Rendez-vous aujourd'hui <span class="text-muted fw-normal">({{ date_jour_label }})</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ en_attente_count }}</div>
+    <div class="stat-label">En attente</div>
+  </div>
+</div>
+
 {% if prochain %}
-  <div class="card-custom p-4 mb-4" style="border-left: 4px solid var(--color-accent);">
-    <h5 class="mb-2">Prochain patient à appeler</h5>
-    <p class="mb-1"><strong>{{ prochain.titre }}</strong> — {{ prochain.date }}</p>
-    <p class="text-muted small mb-2">{{ prochain.utilisateur.username }}{% if prochain.service %} — {{ prochain.service.nom }}{% endif %}</p>
+  <div class="card-custom card-prochain">
+    <h3>Prochain dans la file d'attente</h3>
+    {% if prochain_pas_aujourdhui %}
+    <div class="alert alert-warning py-2 px-3 mb-3 small mb-2" role="status">
+      Ce patient est <strong>en attente</strong> pour une autre date que celle du jour ({{ date_jour_label }}).
+      « Rendez-vous aujourd'hui » compte uniquement les RDV prévus <strong>aujourd'hui</strong>.
+    </div>
+    {% endif %}
+    <div class="prochain-name">{{ prochain_name|default:prochain.utilisateur.username }}</div>
+    <div class="prochain-meta">{{ prochain.titre }} — {{ prochain.date|date:"d/m/Y à H:i" }}{% if prochain.service %} · {{ prochain.service.nom }}{% endif %}</div>
     <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
       {% csrf_token %}
-      <button type="submit" class="btn btn-primary btn-custom btn-primary-custom btn-sm">Appeler ce patient</button>
+      <button type="submit" class="btn btn-appeler">Appeler ce patient</button>
     </form>
   </div>
 {% endif %}
 
-<div class="card-custom p-4">
-  <h5 class="mb-3 fw-semibold">Rendez-vous du jour</h5>
+<div class="card-custom card-rdv-jour">
+  <div class="card-header">Rendez-vous du jour</div>
   {% if rdv_du_jour %}
     <div class="table-responsive">
-      <table class="table table-hover">
+      <table class="table table-hover mb-0">
         <thead>
           <tr>
             <th>Heure</th>
             <th>Motif</th>
             <th>Patient</th>
+            <th>Type</th>
             <th>Acte</th>
             <th>Statut</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {% for r in rdv_du_jour %}
+          {% for entry in rdv_du_jour %}
             <tr>
-              <td>{{ r.date|time:"H:i" }}</td>
-              <td>{{ r.titre }}</td>
-              <td>{{ r.utilisateur.username }}</td>
-              <td>{% if r.service %}{{ r.service.nom }}{% else %}—{% endif %}</td>
+              <td>{{ entry.rdv.date|time:"H:i" }}</td>
+              <td>{{ entry.rdv.titre }}</td>
+              <td>{{ entry.patient_name }}</td>
+              <td><span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span></td>
+              <td>{% if entry.rdv.service %}{{ entry.rdv.service.nom }}{% else %}—{% endif %}</td>
+              <td><span class="badge badge-custom badge-{{ entry.rdv.status }}">{{ entry.rdv.get_status_display }}</span></td>
               <td>
-                <span class="badge badge-custom badge-{{ r.status }}">{{ r.status }}</span>
-              </td>
-              <td>
-                {% if r.status != 'done' and r.status != 'cancelled' %}
-                  <form method="post" action="{% url 'rdv_valider' r.pk %}" class="d-inline">
+                {% if entry.rdv.status != 'done' and entry.rdv.status != 'cancelled' %}
+                  <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-success me-1">Valider</button>
                   </form>
-                  <form method="post" action="{% url 'rdv_annuler' r.pk %}" class="d-inline">
+                  <form method="post" action="{% url 'rdv_annuler' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>
                   </form>
@@ -79,7 +127,9 @@
       </table>
     </div>
   {% else %}
-    <p class="text-muted mb-0">Aucun rendez-vous aujourd'hui.</p>
+    <div class="p-4 text-center text-muted">
+      <p class="mb-0">Aucun rendez-vous prévu aujourd'hui.</p>
+    </div>
   {% endif %}
 </div>
 {% endblock %}

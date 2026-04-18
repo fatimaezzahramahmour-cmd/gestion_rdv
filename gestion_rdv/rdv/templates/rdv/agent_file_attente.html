@@ -1,11 +1,31 @@
 {% extends 'rdv/base.html' %}
 
-{% block title %}File d'attente — Agent{% endblock %}
+{% block title %}File d'attente — Réception{% endblock %}
+
+{% block body_extra_class %}page-agent-file{% endblock %}
+
+{% block extra_css_espace %}
+.page-agent-file .agent-page-head { margin-bottom: 1.5rem; }
+.page-agent-file .agent-page-head h1 { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0; letter-spacing: -0.02em; }
+.page-agent-file .agent-page-head .lead { color: #64748b; font-size: 0.9375rem; margin: 0; line-height: 1.5; }
+.page-agent-file .rdv-item { border-radius: 14px; padding: 1.25rem 1.5rem; border-left: 4px solid #15803d; margin-bottom: 0.75rem; }
+.page-agent-file .rdv-item .num-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #15803d; color: #fff; font-weight: 700; font-size: 0.875rem; flex-shrink: 0; }
+.page-agent-file .rdv-item .patient-name { font-size: 1.0625rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+.page-agent-file .rdv-item .patient-meta { font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem; }
+.page-agent-file .rdv-item .btn-confirmer { background: linear-gradient(180deg, #15803d 0%, #166534 100%); color: #fff; font-weight: 600; padding: 0.5rem 1rem; border-radius: 10px; border: none; font-size: 0.875rem; box-shadow: 0 2px 8px rgba(21,128,61,.25); }
+.page-agent-file .rdv-item .btn-confirmer:hover { background: linear-gradient(180deg, #166534 0%, #14532d 100%); color: #fff; }
+.page-agent-file .empty-state { padding: 2.5rem; text-align: center; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.page-agent-file .empty-state .empty-icon { font-size: 2.5rem; color: #94a3b8; margin-bottom: 0.75rem; }
+.page-agent-file .empty-state p { color: #64748b; margin-bottom: 1rem; }
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">File d'attente</h1>
-  <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'agent_dashboard' %}">← Accueil agent</a>
+<div class="agent-page-head d-flex flex-wrap justify-content-between align-items-start gap-3">
+  <div>
+    <h1>File d'attente</h1>
+    <p class="lead">Ordre de passage des patients. Confirmez le passage chez le médecin une fois le patient reçu en cabinet.</p>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{% url 'agent_dashboard' %}">← Tableau de bord</a>
 </div>
 
 {% if messages %}
@@ -17,37 +37,36 @@
 {% endif %}
 
 {% if queue_entries %}
-  <p class="text-muted mb-4">Cliquez sur « Confirmer passage chez le médecin » quand le patient est passé en cabinet.</p>
   <div class="rdv-list">
     {% for entry in queue_entries %}
       <div class="rdv-item card-custom">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div>
-            <h5 class="rdv-item-title mb-1">Patient numéro {{ entry.position }} : {{ entry.label }}</h5>
-            <span class="rdv-item-date">{{ entry.rdv.date }}</span>
-            {% if entry.rdv.titre %}<span class="text-muted"> — {{ entry.rdv.titre }}</span>{% endif %}
-            {% if entry.rdv.service %}<span class="text-muted"> ({{ entry.rdv.service.nom }})</span>{% endif %}
+        <div class="d-flex flex-wrap align-items-start gap-3">
+          <span class="num-badge">{{ entry.position }}</span>
+          <div class="flex-grow-1">
+            <div class="patient-name">{{ entry.label }}</div>
+            <div class="patient-meta">
+              {{ entry.rdv.date|date:"d/m/Y à H:i" }}
+              {% if entry.rdv.titre %} — {{ entry.rdv.titre }}{% endif %}
+              {% if entry.rdv.service %} · {{ entry.rdv.service.nom }}{% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span>
+              <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="file_attente">
+                <button type="submit" class="btn btn-confirmer">Confirmer passage chez le médecin</button>
+              </form>
+            </div>
           </div>
-          <div>
-            <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
-              {% csrf_token %}
-              <input type="hidden" name="next" value="file_attente">
-              <button type="submit" class="btn btn-success btn-custom btn-success-custom">Confirmer passage chez le médecin</button>
-            </form>
-          </div>
-        </div>
-        <div class="d-flex gap-1 flex-wrap mt-2">
-          <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% else %}normal{% endif %}">{{ entry.rdv.priority }}</span>
-          <span class="badge bg-secondary">Pas encore passé</span>
         </div>
       </div>
     {% endfor %}
   </div>
 {% else %}
   <div class="empty-state card-custom">
-    <div class="empty-state-icon"></div>
-    <p class="mb-3">Aucun patient en attente dans la file.</p>
-    <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'agent_dashboard' %}">Retour à l'accueil agent</a>
+    <div class="empty-icon">⏱</div>
+    <p class="mb-0">Aucun patient en attente dans la file.</p>
+    <a class="btn btn-primary btn-custom btn-primary-custom mt-3" href="{% url 'agent_dashboard' %}">Retour au tableau de bord</a>
   </div>
 {% endif %}
 {% endblock %}

@@ -15,6 +15,9 @@ urlpatterns = [
     path('mes-rendez-vous/', views.rdv_list, name='rdv_list'),
     path('file-dattente/', views.file_attente_view, name='file_attente'),
     path('rdv/create/', views.rdv_create, name='rdv_create'),
+    path('rdv/<int:pk>/annuler/', views.rdv_patient_annuler, name='rdv_patient_annuler'),
+    path('rdv/<int:pk>/modifier/', views.rdv_patient_modifier, name='rdv_patient_modifier'),
+    path('rdv/creneaux/', views.rdv_creneaux_api, name='rdv_creneaux_api'),
     path('rdv/next/', views.rdv_next, name='rdv_next'),
     path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
 ]

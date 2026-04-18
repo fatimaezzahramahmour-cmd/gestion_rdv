@@ -1,14 +1,48 @@
 {% extends 'rdv/base.html' %}
 
-{% block title %}Extranet — Cabinet Dentaire{% endblock %}
+{% block title %}Accueil — Cabinet Dentaire{% endblock %}
+
+{% block body_extra_class %}page-extranet{% endblock %}
+
+{% block extra_css_espace %}
+.page-extranet .welcome-title { font-size: 1.5rem; font-weight: 700; color: #0f172a; letter-spacing: -0.025em; margin-bottom: 0.4rem; line-height: 1.3; }
+.page-extranet .welcome-sub { color: #64748b; font-size: 0.9375rem; margin-bottom: 1.75rem; line-height: 1.5; }
+.page-extranet .action-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.page-extranet .action-card {
+  display: block; padding: 1.35rem 1.4rem; border-radius: 14px; border: 1px solid #e2e8f0;
+  background: #fff; text-decoration: none; color: #0f172a; font-weight: 600; font-size: 0.9375rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 14px rgba(0,0,0,.05);
+  transition: border-color .2s, box-shadow .25s, transform .2s ease;
+}
+.page-extranet .action-card:hover { border-color: rgba(21,128,61,.22); box-shadow: 0 4px 12px rgba(0,0,0,.06), 0 8px 24px rgba(21,128,61,.1); color: #0f172a; transform: translateY(-2px); }
+.page-extranet .action-card.primary {
+  background: linear-gradient(180deg, #15803d 0%, #166534 100%); color: #fff; border-color: #15803d;
+  box-shadow: 0 2px 8px rgba(21,128,61,.25);
+}
+.page-extranet .action-card.primary:hover { background: linear-gradient(180deg, #166534 0%, #14532d 100%); color: #fff; border-color: #166534; box-shadow: 0 6px 20px rgba(21,128,61,.35); transform: translateY(-2px); }
+.page-extranet .action-card.outline { background: #fff; }
+.page-extranet .logout-wrap { margin-top: 1.75rem; padding-top: 1.35rem; border-top: 1px solid #e2e8f0; }
+.page-extranet .logout-wrap .btn { font-size: 0.875rem; color: #64748b; font-weight: 500; }
+{% endblock %}
+
+{# Pas de double bloc Bienvenue + image : tout est dans le contenu ci-dessous #}
+{% block espace_intro %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1 class="page-title">Bienvenue au cabinet dentaire</h1>
+<div class="page-header mb-3">
+  <div>
+    <h1 class="welcome-title">{% if user_display_name %}Bienvenue, {{ user_display_name }}{% else %}Bienvenue{% endif %}</h1>
+    <p class="welcome-sub mb-0">Choisissez une action pour gérer vos rendez-vous. Vos rendez-vous en toute simplicité.</p>
+  </div>
 </div>
 
-<div class="card-custom welcome-card">
-  <p class="mb-3">Rôle : <strong>{{ role }}</strong></p>
-  <a class="btn btn-secondary btn-custom btn-secondary-custom" href="{% url 'logout' %}">Déconnexion</a>
+<div class="action-grid">
+  <a class="action-card primary" href="{% url 'rdv_create' %}">Prendre un rendez-vous</a>
+  <a class="action-card outline" href="{% url 'rdv_list' %}">Mes rendez-vous</a>
+  <a class="action-card outline" href="{% url 'file_attente' %}">File d'attente</a>
+</div>
+
+<div class="logout-wrap">
+  <a class="btn btn-link btn-sm" href="{% url 'logout' %}">Déconnexion</a>
 </div>
 {% endblock %}

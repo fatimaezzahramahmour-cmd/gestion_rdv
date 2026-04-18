@@ -5,6 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cabinet Dentaire — Accueil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="{% static 'rdv/css/theme.css' %}" rel="stylesheet">
   <style>
@@ -21,18 +24,88 @@
     .btn-connexion:hover { color: var(--dental-green-dark) !important; }
     .btn-rdv { background: var(--dental-green); color: #fff !important; border-radius: 6px; padding: 8px 20px; font-weight: 600; border: none; text-transform: uppercase; letter-spacing: .03em; }
     .btn-rdv:hover { background: var(--dental-green-dark); color: #fff; }
-    .hero {
-      min-height: 420px; display: flex; align-items: center;
-      background: linear-gradient(90deg, #e8eef4 0%, #e8eef4 42%, transparent 48%), linear-gradient(105deg, rgba(26, 54, 93, 0.15) 0%, transparent 45%), url('https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=1400') right center/cover no-repeat;
+    /* Hero plein écran — carte photo (réf. clinique) */
+    .hero-home {
+      position: relative;
+      min-height: min(78vh, 640px);
+      display: flex;
+      align-items: stretch;
+      overflow: hidden;
+      font-family: 'DM Sans', system-ui, sans-serif;
     }
-    .hero .hero-left { color: var(--nav-blue); }
-    .hero h1 { font-size: 2.5rem; font-weight: 700; color: var(--nav-blue); }
-    .hero .lead { color: #5a6c7d; }
-    .hero .breadcrumb { background: transparent; padding: 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; color: var(--nav-blue); }
-    .hero .breadcrumb-item + .breadcrumb-item::before { content: ">"; color: var(--nav-blue); opacity: .7; }
-    .hero .breadcrumb a { color: var(--nav-blue); text-decoration: none; }
-    .hero .breadcrumb a:hover { color: var(--dental-blue); }
-    .hero .text-success { color: var(--dental-green) !important; }
+    .hero-home__bg {
+      position: absolute;
+      inset: 0;
+      background: #0f172a center/cover no-repeat;
+      transform: scale(1.02);
+    }
+    .hero-home__gradient {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        105deg,
+        rgba(15, 23, 42, 0.92) 0%,
+        rgba(15, 23, 42, 0.72) 38%,
+        rgba(15, 23, 42, 0.35) 52%,
+        rgba(15, 23, 42, 0.08) 68%,
+        transparent 85%
+      );
+    }
+    .hero-home__container {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      min-height: min(78vh, 640px);
+      padding-top: 2.75rem;
+      padding-bottom: 3rem;
+    }
+    .hero-home__content { max-width: 36rem; }
+    .hero-home__kicker {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: #4ade80;
+      margin-bottom: 0.85rem;
+    }
+    .hero-home__title {
+      font-size: clamp(1.85rem, 4.2vw, 2.85rem);
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.12;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+      text-shadow: 0 2px 28px rgba(0,0,0,.35);
+    }
+    .hero-home__lead {
+      font-size: 1.0625rem;
+      color: rgba(255,255,255,.94);
+      line-height: 1.6;
+      margin-bottom: 1.85rem;
+      max-width: 32rem;
+    }
+    .btn-hero-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--dental-green);
+      color: #fff !important;
+      border: none;
+      border-radius: 10px;
+      padding: 0.85rem 1.75rem;
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 4px 20px rgba(26,127,55,.35);
+      transition: background .2s, transform .15s;
+    }
+    .btn-hero-cta:hover { background: var(--dental-green-dark); color: #fff; transform: translateY(-1px); }
+    @media (max-width: 767px) {
+      .hero-home { min-height: 520px; }
+      .hero-home__gradient {
+        background: linear-gradient(180deg, rgba(15,23,42,.88) 0%, rgba(15,23,42,.55) 45%, rgba(15,23,42,.25) 100%);
+      }
+    }
     .section-title { font-weight: 700; color: var(--text-dark); margin-bottom: 2rem; }
     .section-title small { color: var(--dental-blue); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
     .card-service { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,.08); transition: transform .2s; }
@@ -42,6 +115,11 @@
     .footer-public a { color: #b0bec5; text-decoration: none; }
     .footer-public a:hover { color: var(--dental-blue-light); }
     .footer-public .footer-title { color: #fff; font-weight: 700; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 2px solid var(--dental-blue); display: inline-block; }
+    .footer-public .footer-logo-block { display: flex; align-items: center; gap: 12px; }
+    .footer-public .footer-logo-block img { height: 44px; width: auto; flex-shrink: 0; }
+    .footer-public .footer-brand { display: flex; flex-direction: column; line-height: 1.25; }
+    .footer-public .footer-brand-sub { font-size: 0.7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
+    .footer-public .footer-brand-main { font-size: 1.15rem; font-weight: 700; color: #fff; }
     .bg-pattern { background-color: #f0fdf4; background-image: radial-gradient(circle at 20% 50%, rgba(26,127,55,.06) 0%, transparent 50%); }
     .img-cabinet { border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.12); object-fit: cover; width: 100%; height: 280px; }
     /* Notre travail — style ref */
@@ -97,24 +175,19 @@
     </div>
   </nav>
 
-  <section class="hero py-5" id="accueil">
-    <div class="container">
-      <div class="row align-items-center">
-        <div class="col-lg-6 col-xl-5 hero-left">
-          <nav aria-label="Fil d'Ariane" class="mb-3">
-            <ol class="breadcrumb mb-0">
-              <li class="breadcrumb-item"><a href="{% url 'accueil' %}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293L8.707 1.5Z"/></svg> Accueil</a></li>
-              <li class="breadcrumb-item active" aria-current="page">Rendez-vous</li>
-            </ol>
-          </nav>
-          <h1 class="mb-3">Rendez-vous</h1>
-          <p class="lead mb-4">Votre centre dentaire pour les soins, l’esthétique et la prévention. Prenez rendez-vous en ligne.</p>
-          {% if not request.user.is_authenticated %}
-          <a class="btn btn-rdv btn-lg" href="{% url 'signup' %}">Prendre rendez-vous</a>
-          {% else %}
-          <a class="btn btn-rdv btn-lg" href="{% url 'rdv_create' %}">Nouveau rendez-vous</a>
-          {% endif %}
-        </div>
+  <section class="hero-home" id="accueil" aria-labelledby="hero-title">
+    <div class="hero-home__bg" style="background-image:url('{% static 'rdv/images/soins-dentaire-3.jpg' %}');"></div>
+    <div class="hero-home__gradient"></div>
+    <div class="container hero-home__container">
+      <div class="hero-home__content col-lg-7 col-xl-6 px-0">
+        <p class="hero-home__kicker">Cabinet dentaire</p>
+        <h1 class="hero-home__title" id="hero-title">Nous prenons soin de votre sourire</h1>
+        <p class="hero-home__lead">Votre centre dentaire pour les soins, l’esthétique et la prévention. Prenez rendez-vous en ligne.</p>
+        {% if not request.user.is_authenticated %}
+        <a class="btn btn-hero-cta btn-lg" href="{% url 'signup' %}">Prendre rendez-vous</a>
+        {% else %}
+        <a class="btn btn-hero-cta btn-lg" href="{% url 'rdv_create' %}">Prendre rendez-vous</a>
+        {% endif %}
       </div>
     </div>
   </section>
@@ -125,7 +198,7 @@
       <h2 class="section-title"><small>Centre dentaire</small><br>Notre cabinet</h2>
       <div class="row align-items-center g-4">
         <div class="col-lg-6 order-lg-2">
-          <img src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800" alt="Cabinet dentaire — équipe et soins" class="img-cabinet">
+          <img src="{% static 'rdv/images/patient-dentaire-1.jpg' %}" alt="Cabinet dentaire — équipe et soins" class="img-cabinet">
         </div>
         <div class="col-lg-6 order-lg-1">
           <h3 class="h4 mb-3" style="color: var(--dental-green);">Dentiste — Cabinet dentaire</h3>
@@ -133,7 +206,11 @@
           <p class="text-muted">Notre cabinet est ouvert du lundi au vendredi. Prise de rendez-vous en ligne ou par téléphone.</p>
           <div class="bg-light rounded-3 p-4 border-start border-4 border-success mt-3">
             <p class="mb-1"><strong>Horaires</strong></p>
-            <p class="text-muted small mb-0">Lundi – Vendredi : 9h30 – 19h30</p>
+            <p class="text-muted small mb-0">Lundi : 8h00 – 12h55 et 14h00 – 18h05</p>
+            <p class="text-muted small mb-0">Mardi : 8h00 – 12h55 et 14h00 – 18h05</p>
+            <p class="text-muted small mb-0">Mercredi : 8h00 – 12h55 et 14h00 – 18h05</p>
+            <p class="text-muted small mb-0">Jeudi : 8h00 – 12h55 et 14h00 – 18h05</p>
+            <p class="text-muted small mb-0">Vendredi : 8h00 – 12h55</p>
           </div>
         </div>
       </div>
@@ -152,7 +229,7 @@
               {% if s.image_url %}
                 <img src="{{ s.image_url }}" alt="{{ s.nom }}">
               {% else %}
-                <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=600" alt="{{ s.nom }}">
+                <img src="{% static 'rdv/images/cabinet-dentaire-2.jpg' %}" alt="{{ s.nom }}">
               {% endif %}
               <div class="badge-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M12 2c2 0 3 2 3 4v2c0 4-1 7-3 9v4H9v-4c-2-2-3-5-3-9V6c0-2 1-4 3-4z"/><path d="M9 12h6"/></svg>
@@ -186,8 +263,12 @@
     <div class="container">
       <div class="row">
         <div class="col-lg-4 mb-4">
-          <div class="d-flex align-items-center gap-2 mb-3">
-            <img src="{% static 'rdv/images/logo-dent.png' %}" alt="Cabinet dentaire" height="40">
+          <div class="footer-logo-block mb-3">
+            <img src="{% static 'rdv/images/logo.svg' %}" alt="" class="footer-logo">
+            <span class="footer-brand">
+              <span class="footer-brand-sub">Centre dentaire</span>
+              <span class="footer-brand-main">Cabinet dentaire</span>
+            </span>
           </div>
           <p class="small text-secondary">Cabinet multidisciplinaire pour l’ensemble des soins : consultation, parodontie, soins conservateurs, prothèse et esthétique dentaire.</p>
         </div>
