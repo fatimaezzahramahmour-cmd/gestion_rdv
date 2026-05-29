@@ -275,3 +275,89 @@ class Statistique:
         total = qs.count()
         urgent = qs.filter(priority='urgent').count()
         return {'total': total, 'urgent': urgent, 'by_status': list(by_status)}
+# ============================================================================
+# CHATBOT IA — MODÈLES (À AJOUTER À LA FIN DU FICHIER)
+# ============================================================================
+
+class Conversation(models.Model):
+    STATUT_CHOICES = [
+        ('active', 'Active'),
+        ('fermee', 'Fermée'),
+        ('transferee', 'Transférée à un agent'),
+    ]
+    id = models.BigAutoField(primary_key=True)
+    utilisateur = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='conversations'
+    )
+    session_id = models.CharField(max_length=100, db_index=True)
+    sujet = models.CharField(max_length=200, blank=True, default="")
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='active')
+    contexte = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'rdv_conversation'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        user_label = self.utilisateur.email if self.utilisateur else f"Anonyme-{self.session_id[:8]}"
+        return f"Conversation #{self.id} — {user_label}"
+
+    @property
+    def nombre_messages(self):
+        return self.messages.count()
+
+
+class MessageChatbot(models.Model):
+    ROLE_CHOICES = [
+        ('user', 'Utilisateur'), ('assistant', 'Assistant IA'),
+        ('system', 'Système'), ('agent', 'Agent humain'),
+    ]
+    id = models.BigAutoField(primary_key=True)
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    contenu = models.TextField()
+    intention_detectee = models.CharField(max_length=50, blank=True, default="")
+    confiance = models.FloatField(default=0.0)
+    sources_utilisees = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'rdv_message_chatbot'
+        ordering = ['created_at']
+
+
+
+class ActionChatbot(models.Model):
+    nom = models.CharField(max_length=100)
+    type_action = models.CharField(max_length=50, default="redirect")  # ← AJOUTEZ CECI
+    description = models.TextField(blank=True)
+    url_cible = models.URLField(blank=True, null=True)
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Action Chatbot"
+        verbose_name_plural = "Actions Chatbot"
+
+    def __str__(self):
+        return self.nom
+
+class FAQDentaire(models.Model):
+    question = models.CharField(max_length=255, unique=True)
+    reponse = models.TextField()
+    categorie = models.CharField(max_length=100, blank=True, default="general")
+    priorite = models.IntegerField(default=0, help_text="Ordre d'affichage (0 = normal, plus haut = prioritaire)")
+    compteur_utilisation = models.PositiveIntegerField(default=0, help_text="Nombre de fois que cette FAQ a été utilisée")
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "FAQ Dentaire"
+        verbose_name_plural = "FAQs Dentaires"
+        ordering = ['-priorite', 'question']
+
+    def __str__(self):
+        return self.question

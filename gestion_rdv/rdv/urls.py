@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import chatbot_views
+
 
 urlpatterns = [
     path('', views.accueil, name='accueil'),
@@ -20,4 +22,9 @@ urlpatterns = [
     path('rdv/creneaux/', views.rdv_creneaux_api, name='rdv_creneaux_api'),
     path('rdv/next/', views.rdv_next, name='rdv_next'),
     path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('api/chat/', chatbot_views.api_chat_message, name='api_chat_message'),
+    path('api/chat/history/', chatbot_views.api_chat_history, name='api_chat_history'),
+    path('api/chat/feedback/', chatbot_views.api_chat_feedback, name='api_chat_feedback'),
+    path('admin/chatbot-stats/', chatbot_views.chatbot_stats, name='chatbot_stats'),
+
 ]

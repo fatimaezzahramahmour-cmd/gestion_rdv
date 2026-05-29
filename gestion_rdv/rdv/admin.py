@@ -97,3 +97,37 @@ class HoraireCabinetAdmin(admin.ModelAdmin):
 	list_editable = ('actif',)
 	list_per_page = 25
 	fields = ('jour', 'heure_ouverture', 'heure_fermeture', 'actif')
+# ============================================================================
+# CHATBOT ADMIN
+# ============================================================================
+
+from .models import Conversation, MessageChatbot, FAQDentaire, ActionChatbot
+
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'utilisateur', 'session_id', 'sujet', 'statut', 'created_at']
+    list_filter = ['statut', 'created_at']
+    search_fields = ['session_id', 'sujet', 'utilisateur__email']
+
+
+@admin.register(MessageChatbot)
+class MessageChatbotAdmin(admin.ModelAdmin):
+    list_display = ['id', 'conversation', 'role', 'contenu', 'intention_detectee', 'created_at']
+    list_filter = ['role', 'intention_detectee', 'created_at']
+
+
+@admin.register(FAQDentaire)
+class FAQDentaireAdmin(admin.ModelAdmin):
+    list_display = ['question', 'categorie', 'actif', 'priorite', 'compteur_utilisation', 'date_creation']
+    list_editable = ['actif', 'priorite']
+    list_filter = ['categorie', 'actif', 'date_creation']
+    search_fields = ['question', 'reponse']
+    ordering = ['-priorite', 'question']
+    readonly_fields = ['compteur_utilisation', 'date_creation']
+
+
+@admin.register(ActionChatbot)
+class ActionChatbotAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'type_action', 'actif']
+    list_filter = ['type_action', 'actif']
