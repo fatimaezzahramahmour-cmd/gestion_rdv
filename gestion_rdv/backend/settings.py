@@ -56,12 +56,7 @@ if TAILSCALE_IP:
     _default_hosts += f',{TAILSCALE_IP}'
 
 # Lecture depuis variable d'environnement ou defaut
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    '0.0.0.0',
-    '100.127.77.70',
-]
+ALLOWED_HOSTS = ['100.127.77.70']
 
 # Ajoute automatiquement l'IP Tailscale si detectee
 if TAILSCALE_IP and TAILSCALE_IP not in ALLOWED_HOSTS:
