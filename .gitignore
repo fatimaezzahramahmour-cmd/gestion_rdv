@@ -7,13 +7,17 @@ __pycache__/
 venv/
 env/
 .venv/
+.venv-*/
+
+# Ancienne structure (ne plus versionner)
+gestion_rdv/
 
 # Django
 *.log
 local_settings.py
 db.sqlite3
-media/
-staticfiles/
+backend/media/
+backend/staticfiles/
 
 # IDE
 .idea/

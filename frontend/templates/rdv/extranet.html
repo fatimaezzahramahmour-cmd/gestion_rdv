@@ -1,0 +1,31 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}Accueil — Cabinet Dentaire{% endblock %}
+{% block extranet_heading %}Accueil{% endblock %}
+
+{% block body_extra_class %}page-extranet{% endblock %}
+
+{% block content %}
+<div class="extranet-welcome">
+  <h1>{% if user_display_name %}Bonjour, {{ user_display_name }}{% else %}Bonjour{% endif %}</h1>
+  <p>Gérez vos rendez-vous et suivez votre file d'attente en toute simplicité.</p>
+</div>
+
+<div class="extranet-modules">
+  <a class="extranet-module primary" href="{% url 'rdv_create' %}">
+    <div class="extranet-module-label">Action principale</div>
+    <p class="extranet-module-title">Prendre un rendez-vous</p>
+    <p class="extranet-module-desc">Choisissez un créneau et un type de soin en ligne.</p>
+  </a>
+  <a class="extranet-module" href="{% url 'rdv_list' %}">
+    <div class="extranet-module-label">Suivi</div>
+    <p class="extranet-module-title">Mes rendez-vous</p>
+    <p class="extranet-module-desc">Consultez, modifiez ou annulez vos rendez-vous.</p>
+  </a>
+  <a class="extranet-module" href="{% url 'file_attente' %}">
+    <div class="extranet-module-label">Temps réel</div>
+    <p class="extranet-module-title">File d'attente</p>
+    <p class="extranet-module-desc">Visualisez votre position dans la file du cabinet.</p>
+  </a>
+</div>
+{% endblock %}

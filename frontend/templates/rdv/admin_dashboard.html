@@ -1,0 +1,92 @@
+{% extends 'rdv/base.html' %}
+
+{% block title %}Tableau de bord admin — Cabinet Dentaire{% endblock %}
+{% block extranet_heading %}Administration{% endblock %}
+
+{% block body_extra_class %}page-admin-dashboard{% endblock %}
+
+{% block extra_css_espace %}
+.page-admin-dashboard .admin-hero { background: linear-gradient(135deg, rgba(47,128,237,.08) 0%, rgba(47,128,237,.02) 50%, #f8fafc 100%); border-radius: 16px; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem; border: 1px solid rgba(47,128,237,.12); }
+.page-admin-dashboard .admin-hero h1 { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0; }
+.page-admin-dashboard .admin-hero p { color: #64748b; font-size: 0.9375rem; margin: 0; }
+.page-admin-dashboard .stats-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.page-admin-dashboard .stat-card { flex: 1; min-width: 160px; background: #fff; border-radius: 12px; padding: 1.1rem 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.page-admin-dashboard .stat-card.primary .stat-value { color: #2563eb; }
+.page-admin-dashboard .stat-card.warning .stat-value { color: #d97706; }
+.page-admin-dashboard .stat-card .stat-value { font-size: 1.75rem; font-weight: 700; line-height: 1.2; }
+.page-admin-dashboard .stat-card .stat-label { font-size: 0.8125rem; color: #64748b; margin-top: 0.25rem; }
+.page-admin-dashboard .panel { border-radius: 14px; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.04); margin-bottom: 1.5rem; overflow: hidden; }
+.page-admin-dashboard .panel-header { background: #f8fafc; padding: 1rem 1.25rem; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0; }
+.page-admin-dashboard .panel-body { padding: 1rem 1.25rem; }
+.page-admin-dashboard .status-list li { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid #f1f5f9; }
+.page-admin-dashboard .status-list li:last-child { border-bottom: none; }
+.page-admin-dashboard .upcoming-item { border-radius: 10px; border: 1px solid #e2e8f0; padding: 0.9rem 1rem; margin-bottom: 0.65rem; background: #fff; }
+.page-admin-dashboard .upcoming-item:last-child { margin-bottom: 0; }
+.page-admin-dashboard .upcoming-item strong { color: #0f172a; }
+{% endblock %}
+
+{% block content %}
+<div class="admin-hero d-flex flex-wrap justify-content-between align-items-start gap-3">
+  <div>
+    <h1>Tableau de bord administrateur</h1>
+    <p>Vue d'ensemble des rendez-vous, statistiques et activité des 7 prochains jours.</p>
+  </div>
+  <a class="btn btn-primary btn-custom btn-primary-custom" href="/admin/">Ouvrir Django Admin</a>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card primary">
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-label">Total rendez-vous</div>
+  </div>
+  <div class="stat-card warning">
+    <div class="stat-value">{{ urgent_count }}</div>
+    <div class="stat-label">Cas urgents</div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-header">Par statut</div>
+      <div class="panel-body">
+        {% if by_status %}
+          <ul class="list-unstyled status-list mb-0">
+            {% for s in by_status %}
+              <li>
+                <span>{{ s.status|capfirst }}</span>
+                <strong>{{ s.count }}</strong>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-0">Aucune donnée disponible.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel h-100">
+      <div class="panel-header">Rendez-vous à venir (7 jours)</div>
+      <div class="panel-body">
+        {% if upcoming %}
+          {% for r in upcoming %}
+            <div class="upcoming-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div>
+                <strong>{{ r.titre }}</strong><br>
+                <small class="text-muted">{{ r.date|date:"d/m/Y à H:i" }} — {{ r.utilisateur.username }}</small>
+              </div>
+              <div class="d-flex gap-1 flex-wrap">
+                <span class="badge badge-custom badge-{% if r.priority == 'urgent' %}urgent{% elif r.priority == 'control' %}control{% else %}normal{% endif %}">{{ r.get_priority_display }}</span>
+                <span class="badge badge-custom badge-{{ r.status }}">{{ r.get_status_display }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-0">Aucun rendez-vous prévu cette semaine.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
