@@ -9,10 +9,14 @@
 .page-agent-file .agent-page-head { margin-bottom: 1.5rem; }
 .page-agent-file .agent-page-head h1 { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0; letter-spacing: -0.02em; }
 .page-agent-file .agent-page-head .lead { color: #64748b; font-size: 0.9375rem; margin: 0; line-height: 1.5; }
+.page-agent-file .section-title { font-size: 0.875rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; margin: 1.5rem 0 0.75rem 0; }
 .page-agent-file .rdv-item { border-radius: 14px; padding: 1.25rem 1.5rem; border-left: 4px solid #15803d; margin-bottom: 0.75rem; }
+.page-agent-file .rdv-item.called { border-left-color: #0284c7; background: linear-gradient(90deg, rgba(2,132,199,.05) 0%, #fff 120px); }
 .page-agent-file .rdv-item .num-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #15803d; color: #fff; font-weight: 700; font-size: 0.875rem; flex-shrink: 0; }
 .page-agent-file .rdv-item .patient-name { font-size: 1.0625rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
 .page-agent-file .rdv-item .patient-meta { font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem; }
+.page-agent-file .rdv-item .btn-appeler { background: #2563eb; color: #fff; font-weight: 600; padding: 0.5rem 1rem; border-radius: 10px; border: none; font-size: 0.875rem; }
+.page-agent-file .rdv-item .btn-appeler:hover { background: #1d4ed8; color: #fff; }
 .page-agent-file .rdv-item .btn-confirmer { background: linear-gradient(180deg, #15803d 0%, #166534 100%); color: #fff; font-weight: 600; padding: 0.5rem 1rem; border-radius: 10px; border: none; font-size: 0.875rem; box-shadow: 0 2px 8px rgba(21,128,61,.25); }
 .page-agent-file .rdv-item .btn-confirmer:hover { background: linear-gradient(180deg, #166534 0%, #14532d 100%); color: #fff; }
 .page-agent-file .empty-state { padding: 2.5rem; text-align: center; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; }
@@ -24,7 +28,7 @@
 <div class="agent-page-head d-flex flex-wrap justify-content-between align-items-start gap-3">
   <div>
     <h1>File d'attente</h1>
-    <p class="lead">Ordre de passage des patients. Confirmez le passage chez le médecin une fois le patient reçu en cabinet.</p>
+    <p class="lead">Étape 1 — <strong>Appeler</strong> le patient · Étape 2 — <strong>Confirmer le passage</strong> chez le médecin.</p>
   </div>
   <a class="btn btn-outline-secondary btn-sm" href="{% url 'agent_dashboard' %}">← Tableau de bord</a>
 </div>
@@ -37,9 +41,10 @@
   </div>
 {% endif %}
 
-{% if queue_entries %}
+<h2 class="section-title">En attente — à appeler</h2>
+{% if pending_entries %}
   <div class="rdv-list">
-    {% for entry in queue_entries %}
+    {% for entry in pending_entries %}
       <div class="rdv-item card-custom">
         <div class="d-flex flex-wrap align-items-start gap-3">
           <span class="num-badge">{{ entry.position }}</span>
@@ -52,6 +57,40 @@
             </div>
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span>
+              <span class="badge bg-warning text-dark">En attente</span>
+              <form method="post" action="{% url 'agent_appeler_rdv' entry.rdv.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="file_attente">
+                <button type="submit" class="btn btn-appeler">Appeler le patient</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state card-custom mb-3">
+    <p class="mb-0">Aucun patient en attente dans la file.</p>
+  </div>
+{% endif %}
+
+<h2 class="section-title">Appelés — confirmer le passage</h2>
+{% if called_entries %}
+  <div class="rdv-list">
+    {% for entry in called_entries %}
+      <div class="rdv-item card-custom called">
+        <div class="d-flex flex-wrap align-items-start gap-3">
+          <span class="num-badge" style="background:#0284c7;">☎</span>
+          <div class="flex-grow-1">
+            <div class="patient-name">{{ entry.label }}</div>
+            <div class="patient-meta">
+              {{ entry.rdv.date|date:"d/m/Y à H:i" }}
+              {% if entry.rdv.titre %} — {{ entry.rdv.titre }}{% endif %}
+              {% if entry.rdv.service %} · {{ entry.rdv.service.nom }}{% endif %}
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <span class="badge bg-info text-dark">Appelé</span>
               <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="file_attente">
@@ -65,9 +104,8 @@
   </div>
 {% else %}
   <div class="empty-state card-custom">
-    <div class="empty-icon">⏱</div>
-    <p class="mb-0">Aucun patient en attente dans la file.</p>
-    <a class="btn btn-primary btn-custom btn-primary-custom mt-3" href="{% url 'agent_dashboard' %}">Retour au tableau de bord</a>
+    <div class="empty-icon">☎</div>
+    <p class="mb-0">Aucun patient appelé en attente de passage.</p>
   </div>
 {% endif %}
 {% endblock %}

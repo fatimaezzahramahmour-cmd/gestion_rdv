@@ -119,6 +119,8 @@
         overlay.addEventListener('click', closeMenu);
       })();
     </script>
+    {% if user_role == 'user' %}
     <script src="{% static 'rdv/js/chatbot-widget.js' %}"></script>
+    {% endif %}
   </body>
 </html>

@@ -230,7 +230,8 @@
                     border-bottom-right-radius: 4px;
                 }
                 .cb-message.bot .cb-message-content { border-bottom-left-radius: 4px; }
-                .cb-message-content a { color: var(--cb-primary); text-decoration: underline; }
+                .cb-message-content a { color: var(--cb-primary); text-decoration: underline; font-weight: 500; }
+                .cb-message-content a.cb-link:hover { color: #15803d; }
                 .cb-message.user .cb-message-content a { color: #bbf7d0; }
                 .cb-message-time {
                     font-size: 11px;
@@ -456,6 +457,14 @@
         state.isTyping = false;
     }
 
+    const SUGGESTION_REDIRECTS = {
+        'Se connecter': '/login/',
+        'Reserver maintenant': '/rdv/create/',
+        'Reserver mon creneau': '/rdv/create/',
+        'Gerer mes RDV': '/mes-rendez-vous/',
+        'Mes RDV': '/mes-rendez-vous/',
+    };
+
     function showSuggestions(suggestions) {
         const container = document.getElementById('cb-suggestions');
         container.innerHTML = '';
@@ -464,6 +473,11 @@
             chip.className = 'cb-suggestion';
             chip.textContent = suggestion;
             chip.addEventListener('click', () => {
+                const redirect = SUGGESTION_REDIRECTS[suggestion];
+                if (redirect) {
+                    window.location.href = redirect;
+                    return;
+                }
                 document.getElementById('cb-input').value = suggestion;
                 sendMessage();
             });
@@ -499,11 +513,14 @@
             const data = await response.json();
             hideTyping();
 
-            if (data.success) {
+            if (data.success && data.reponse && data.reponse.trim()) {
                 state.conversationId = data.conversation_id;
-                addBotMessage(data.reponse, data.suggestions);
+                addBotMessage(data.reponse, data.suggestions || []);
             } else {
-                addBotMessage("Desole, une erreur est survenue. Reessayez.", ['Reessayer', 'Contacter le cabinet']);
+                const errMsg = (data.reponse && data.reponse.trim())
+                    ? data.reponse
+                    : "Desole, une erreur est survenue. Reessayez.";
+                addBotMessage(errMsg, ['Reessayer', 'Contacter le cabinet']);
             }
         } catch (error) {
             hideTyping();
@@ -535,7 +552,9 @@
 
     function formatMessage(text) {
         text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        text = text.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
+        // Liens internes : libellé cliquable, même onglet
+        text = text.replace(/\[(.+?)\]\((\/[^)]+)\)/g, '<a href="$2" class="cb-link">$1</a>');
+        text = text.replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
         text = text.replace(/\n/g, '<br>');
         return text;
     }

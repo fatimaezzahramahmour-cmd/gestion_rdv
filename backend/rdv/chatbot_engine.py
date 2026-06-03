@@ -1,10 +1,27 @@
+import logging
 import re
 import random
+import unicodedata
 from datetime import timedelta
 from difflib import SequenceMatcher
+
 from django.utils import timezone
 
-from .models import Conversation, MessageChatbot, FAQDentaire, Rendez_vous, Service
+from .forms import get_creneaux_disponibles
+from .models import Conversation, FAQDentaire, Rendez_vous, Service
+
+logger = logging.getLogger('rdv.chatbot')
+
+MAX_MESSAGE_LENGTH = 2000
+
+# Libellés cliquables pour le patient (markdown → liens dans le widget)
+LIEN_CONNEXION = '[Se connecter à mon compte](/login/)'
+LIEN_RDV = '[Prendre un rendez-vous en ligne](/rdv/create/)'
+LIEN_MES_RDV = '[Consulter mes rendez-vous](/mes-rendez-vous/)'
+LIEN_EXTRANET = '[Accéder à mon espace patient](/extranet/)'
+LIEN_FILE = '[Voir ma position dans la file](/file-dattente/)'
+LIEN_DECONNEXION = '[Me déconnecter](/logout/)'
+LIEN_SERVICES = '[Découvrir nos soins et services](/)'
 
 
 class ChatbotEngine:
@@ -18,26 +35,64 @@ class ChatbotEngine:
     ]
     INCOMPREHENSION = [
         "Je suis desole, je n'ai pas bien compris. Pourriez-vous reformuler ?",
-        "Hmm, je ne suis pas sur de comprendre. Essayez avec : consultation, prix, urgence ou rendez-vous.",
+        "Hmm, je ne suis pas sur de comprendre. Essayez avec : services, prix, urgence ou rendez-vous.",
     ]
 
     INTENTIONS = {
-        'salutation': r'\b(bonjour|salut|bonsoir|coucou|hello|hi|hey)\b',
+        'salutation': r'\b(bonjour|salut|bonsoir|coucou|hello|hi|hey|slt|cc|bjr|wesh|labas|salam|salem)\b',
         'au_revoir': r'\b(au revoir|bye|a bientot|a plus|merci au revoir)\b',
-        'prise_rdv': r'\b(prendre rendez-vous|prendre un rdv|rdv|rendez-vous|reservation|reserver|consultation)\b',
+        'prise_rdv': r'\b(prendre rendez-vous|prendre un rdv|prendre rdv|rdv|rendez-vous|reservation|reserver)\b',
         'annulation_rdv': r'\b(annuler|supprimer|deplacer|modifier mon rdv|changer date)\b',
-        'urgence': r'\b(urgence|urgent|douleur|mal|saignement|casse|dent cassee|abces|infection)\b',
-        'services': r'\b(services|soins|traitement|detartrage|blanchiment|implant|orthodontie|carie|extraction)\b',
+        'urgence': r'\b(urgence|urgent|douleur|mal aux dents|saignement|casse|dent cassee|abces|infection)\b',
+        'services': r'\b(services|soins|traitement|consultation|detartrage|blanchiment|implant|orthodontie|carie|extraction)\b',
         'tarifs': r'\b(prix|tarif|cout|combien|cher|pas cher|remboursement|mutuelle|payer)\b',
-        'horaires': r'\b(horaire|ouvert|ferme|quand|jours|heure|matin|apres-midi|dimanche|week-end)\b',
-        'localisation': r'\b(ou|adresse|localisation|comment venir|parking|acces|trouver)\b',
+        'horaires': r'\b(horaire|horaires|ouvert|ferme|quand|jours|heure|matin|apres-midi|dimanche|week-end)\b',
+        'localisation': r'\b(adresse|localisation|comment venir|parking|acces|trouver)\b',
         'contact': r'\b(telephone|email|mail|joindre|appeler|contact|numero)\b',
-        'preparation': r'\b(preparer|avant|avant la consultation|a apporter|documents|carte vitale)\b',
-        'post_soin': r'\b(apres|apres-soin|douleur apres|manger|brosser|suivre|recommandation)\b',
-        'file_attente': r'\b(file d\'attente|attendre|combien de temps|position|numero|ticket)\b',
+        'preparation': r'\b(preparer|avant la consultation|a apporter|documents|carte vitale)\b',
+        'post_soin': r'\b(apres-soin|douleur apres|manger apres|brosser|recommandation)\b',
+        'file_attente': r'\b(file d\'attente|attendre|combien de temps|ma position|numero|ticket)\b',
         'compte': r'\b(mon compte|connexion|mot de passe|inscription|creer compte|extranet)\b',
-        'remerciement': r'\b(merci|thank|thanks|super|genial|parfait|ok|d\'accord)\b',
+        'remerciement': r'\b(merci beaucoup|thank you|thanks|super merci|genial merci|parfait merci)\b',
     }
+
+    # Priorité en cas de chevauchement d'intentions (score = nb_match * priorité).
+    INTENT_PRIORITY = {
+        'urgence': 100,
+        'annulation_rdv': 95,
+        'tarifs': 90,
+        'file_attente': 88,
+        'prise_rdv': 85,
+        'services': 80,
+        'horaires': 75,
+        'contact': 70,
+        'localisation': 70,
+        'preparation': 65,
+        'post_soin': 65,
+        'compte': 60,
+        'au_revoir': 55,
+        'salutation': 50,
+        'remerciement': 40,
+    }
+
+    HORAIRES_CABINET = {
+        0: ('8h00', '17h20'),
+        1: ('8h00', '17h20'),
+        2: ('8h00', '17h20'),
+        3: ('8h00', '17h20'),
+        4: ('8h00', '12h10'),
+        5: ('Ferme', ''),
+        6: ('Ferme', ''),
+    }
+    JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
+
+    # Salutations exactes ou abréviations (darija / SMS / fautes courantes)
+    SALUTATION_MOTS = frozenset({
+        'salut', 'slt', 'sltt', 'ssalut', 'cc', 'coucou', 'bonjour', 'bjr', 'bonjours',
+        'bonsoir', 'bsr', 'hello', 'hi', 'hey', 'yo', 're', 'wesh', 'labas', 'labes',
+        'salam', 'salem', 'slm', 'sbah', 'bonjourr', 'salutt',
+    })
+    SALUTATION_REFERENCES = ('salut', 'bonjour', 'bonsoir', 'coucou', 'hello', 'salam', 'labas')
 
     def __init__(self, conversation=None):
         self.conversation = conversation
@@ -46,23 +101,86 @@ class ChatbotEngine:
         if conversation:
             self._charger_historique()
 
+    @staticmethod
+    def normaliser_entree(texte):
+        if not texte:
+            return ''
+        texte = str(texte).strip()
+        if len(texte) > MAX_MESSAGE_LENGTH:
+            texte = texte[:MAX_MESSAGE_LENGTH]
+        texte = unicodedata.normalize('NFKD', texte)
+        texte = ''.join(c for c in texte if not unicodedata.combining(c))
+        return texte.lower().strip()
+
+    @staticmethod
+    def _relaxer_texte(texte):
+        """Corrige fautes fréquentes : lettres doublées, ponctuation."""
+        texte = re.sub(r'[^\w\s\']', ' ', texte)
+        texte = re.sub(r'\s+', ' ', texte).strip()
+        # ssalut → salut, bonjouur → bonjour
+        texte = re.sub(r'(.)\1+', r'\1', texte)
+        return texte
+
+    def _detecter_salutation(self, texte_lower):
+        """Salutations même avec fautes, abréviations ou message très court."""
+        relaxed = self._relaxer_texte(texte_lower)
+        candidats = {texte_lower, relaxed, texte_lower.strip('s')}
+
+        for candidat in candidats:
+            if not candidat:
+                continue
+            if candidat in self.SALUTATION_MOTS:
+                return True
+            for ref in self.SALUTATION_REFERENCES:
+                if SequenceMatcher(None, candidat, ref).ratio() >= 0.78:
+                    return True
+
+        tokens = relaxed.split()
+        if tokens and len(tokens) <= 4 and len(relaxed) <= 50:
+            for token in tokens:
+                if token in self.SALUTATION_MOTS:
+                    return True
+                for ref in self.SALUTATION_REFERENCES:
+                    if SequenceMatcher(None, token, ref).ratio() >= 0.78:
+                        return True
+        return False
+
     def _charger_historique(self):
         messages = self.conversation.messages.order_by('-created_at')[:10]
         self.historique = [
-            {"role": msg.role, "content": msg.contenu}
+            {'role': msg.role, 'content': msg.contenu}
             for msg in reversed(list(messages))
         ]
 
     def detecter_intention(self, texte):
-        texte_lower = texte.lower().strip()
+        texte_lower = self.normaliser_entree(texte)
+        if not texte_lower:
+            return 'inconnu'
+
+        if self._detecter_salutation(texte_lower):
+            return 'salutation'
+
+        variantes = [texte_lower, self._relaxer_texte(texte_lower)]
         scores = {}
-        for intention, pattern in self.INTENTIONS.items():
-            matches = len(re.findall(pattern, texte_lower, re.IGNORECASE))
-            if matches > 0:
-                scores[intention] = matches
+        for variante in variantes:
+            if not variante:
+                continue
+            for intention, pattern in self.INTENTIONS.items():
+                matches = len(re.findall(pattern, variante, re.IGNORECASE))
+                if matches > 0:
+                    priorite = self.INTENT_PRIORITY.get(intention, 50)
+                    score = matches * priorite
+                    scores[intention] = max(scores.get(intention, 0), score)
+
         if not scores:
             return self._detecter_par_similarite(texte_lower)
-        return max(scores, key=scores.get)
+
+        intention = max(scores, key=scores.get)
+        logger.debug(
+            'Intention detectee=%s scores=%s texte=%r',
+            intention, scores, texte_lower[:80],
+        )
+        return intention
 
     def _detecter_par_similarite(self, texte):
         faqs = FAQDentaire.objects.filter(actif=True)
@@ -72,16 +190,22 @@ class ChatbotEngine:
             score_q = SequenceMatcher(None, texte.lower(), faq.question.lower()).ratio()
             score_k = 0
             if faq.mots_cles:
-                mots = [m.strip().lower() for m in faq.mots_cles.split(',')]
-                score_k = sum(1 for m in mots if m in texte) / len(mots)
+                mots = [m.strip().lower() for m in faq.mots_cles.split(',') if m.strip()]
+                if mots:
+                    score_k = sum(1 for m in mots if m in texte) / len(mots)
             score_total = score_q * 0.7 + score_k * 0.3
             if score_total > meilleur_score and score_total > 0.4:
                 meilleur_score = score_total
                 meilleure_categorie = faq.categorie
         mapping = {
-            'services': 'services', 'rdv': 'prise_rdv', 'urgence': 'urgence',
-            'tarifs': 'tarifs', 'horaires': 'horaires', 'preparation': 'preparation',
-            'post_op': 'post_soin', 'general': 'salutation',
+            'services': 'services',
+            'rdv': 'prise_rdv',
+            'urgence': 'urgence',
+            'tarifs': 'tarifs',
+            'horaires': 'horaires',
+            'preparation': 'preparation',
+            'post_op': 'post_soin',
+            'general': 'salutation',
         }
         return mapping.get(meilleure_categorie, 'inconnu')
 
@@ -95,7 +219,7 @@ class ChatbotEngine:
             score = 0
             score += SequenceMatcher(None, texte.lower(), faq.question.lower()).ratio() * 50
             if faq.mots_cles:
-                mots_cles = [m.strip().lower() for m in faq.mots_cles.split(',')]
+                mots_cles = [m.strip().lower() for m in faq.mots_cles.split(',') if m.strip()]
                 score += sum(2 for m in mots if m in mots_cles)
             score += sum(1 for m in mots if m in faq.reponse.lower())
             if score > 5:
@@ -104,6 +228,7 @@ class ChatbotEngine:
         return [faq for _, faq in resultats[:limite]]
 
     def generer_reponse(self, texte, utilisateur=None):
+        texte = self.normaliser_entree(texte) or texte
         intention = self.detecter_intention(texte)
         handlers = {
             'salutation': self._handle_salutation,
@@ -123,10 +248,25 @@ class ChatbotEngine:
             'remerciement': self._handle_remerciement,
         }
         handler = handlers.get(intention, self._handle_inconnu)
-        resultat = handler(texte, utilisateur)
+        try:
+            resultat = handler(texte, utilisateur)
+        except Exception:
+            logger.exception('Erreur handler chatbot intention=%s', intention)
+            resultat = {
+                'reponse': random.choice(self.INCOMPREHENSION),
+                'suggestions': ['Voir les services', 'Horaires', 'Urgence'],
+                'confiance': 0.2,
+            }
+
+        reponse = (resultat.get('reponse') or '').strip()
+        if not reponse:
+            logger.warning('Reponse vide pour intention=%s, fallback applique', intention)
+            reponse = random.choice(self.INCOMPREHENSION)
+            resultat['confiance'] = min(resultat.get('confiance', 0.5), 0.3)
+
         self._mettre_a_jour_contexte(intention, resultat)
         return {
-            'reponse': resultat.get('reponse', ''),
+            'reponse': reponse,
             'intention': intention,
             'action': resultat.get('action'),
             'suggestions': resultat.get('suggestions', []),
@@ -147,17 +287,32 @@ class ChatbotEngine:
         self.conversation.sujet = self.contexte.get('dernier_sujet', '')
         self.conversation.save(update_fields=['contexte', 'sujet'])
 
+    def _cabinet_ouvert_maintenant(self):
+        now = timezone.localtime()
+        jour = now.weekday()
+        ouv, fer = self.HORAIRES_CABINET[jour]
+        if ouv == 'Ferme':
+            return False
+        ouv_h = int(ouv.split('h')[0])
+        fer_parts = fer.split('h')
+        fer_h = int(fer_parts[0])
+        fer_m = int(fer_parts[1]) if len(fer_parts) > 1 and fer_parts[1] else 0
+        now_minutes = now.hour * 60 + now.minute
+        return ouv_h * 60 <= now_minutes < fer_h * 60 + fer_m
+
     def _handle_salutation(self, texte, utilisateur):
         heure = timezone.localtime().hour
-        salut = "Bonjour !" if heure < 18 else "Bonsoir !"
+        salut = 'Bonjour !' if heure < 18 else 'Bonsoir !'
         return {
-            'reponse': f"{salut} Je suis l'assistant virtuel du Centre Dentaire. Je peux vous aider avec :\n\n"
-                       f"Nos services (consultation, detartrage, implants...)\n"
-                       f"Prendre un rendez-vous\n"
-                       f"Horaires et acces\n"
-                       f"Tarifs et remboursement\n"
-                       f"Urgences dentaires\n\n"
-                       f"Que souhaitez-vous faire ?",
+            'reponse': (
+                f"{salut} Je suis l'assistant virtuel du Centre Dentaire. Je peux vous aider avec :\n\n"
+                f"- Nos services (consultation, detartrage, implants...)\n"
+                f"- Prendre un rendez-vous\n"
+                f"- Horaires et acces\n"
+                f"- Tarifs et remboursement\n"
+                f"- Urgences dentaires\n\n"
+                f"Que souhaitez-vous faire ?"
+            ),
             'suggestions': ['Voir les services', 'Prendre un RDV', 'Horaires', 'Urgence'],
             'confiance': 0.95,
         }
@@ -168,18 +323,32 @@ class ChatbotEngine:
     def _handle_prise_rdv(self, texte, utilisateur):
         if not utilisateur or not utilisateur.is_authenticated:
             return {
-                'reponse': "Pour prendre un rendez-vous, connectez-vous a votre compte patient.\n\n"
-                           "Se connecter : /login/\n\n"
-                           "Les comptes sont crees par l'administration du cabinet (pas d'inscription en ligne).",
+                'reponse': (
+                    "Pour prendre un rendez-vous, connectez-vous d'abord à votre compte patient.\n\n"
+                    f"{LIEN_CONNEXION}\n\n"
+                    "Les comptes sont créés par l'administration du cabinet "
+                    "(pas d'inscription en ligne)."
+                ),
                 'action': 'redirect_login',
                 'suggestions': ['Se connecter', 'Voir les services', 'Contact'],
                 'confiance': 0.9,
             }
-        creneaux = self._get_prochains_creneaux()
+        creneaux = get_creneaux_disponibles()[:5]
+        if not creneaux:
+            return {
+                'reponse': (
+                    "Aucun créneau disponible pour le moment.\n\n"
+                    f"{LIEN_RDV}\n"
+                    "Ou contactez le cabinet par téléphone."
+                ),
+                'action': 'suggest_rdv',
+                'suggestions': ['Voir le calendrier', 'Contact', 'Horaires'],
+                'confiance': 0.75,
+            }
         reponse = "Parfait ! Voici les prochains creneaux disponibles :\n\n"
-        for i, (date_str, heure) in enumerate(creneaux[:5], 1):
-            reponse += f"{i}. {date_str} a {heure}\n"
-        reponse += "\nReserver mon creneau : /rdv/create/\n"
+        for i, (_, label) in enumerate(creneaux, 1):
+            reponse += f"{i}. {label}\n"
+        reponse += f"\n{LIEN_RDV}"
         return {
             'reponse': reponse,
             'action': 'suggest_rdv',
@@ -190,14 +359,15 @@ class ChatbotEngine:
     def _handle_annulation_rdv(self, texte, utilisateur):
         if not utilisateur or not utilisateur.is_authenticated:
             return {
-                'reponse': "Connectez-vous d'abord a votre compte.\n\nSe connecter : /login/",
+                'reponse': f"Connectez-vous d'abord à votre compte.\n\n{LIEN_CONNEXION}",
                 'action': 'redirect_login',
                 'suggestions': ['Se connecter', 'Contacter le cabinet'],
                 'confiance': 0.9,
             }
         rdvs = Rendez_vous.objects.filter(
-            utilisateur=utilisateur, status__in=['pending', 'confirmed'],
-            date__gte=timezone.now()
+            utilisateur=utilisateur,
+            status__in=['pending', 'confirmed'],
+            date__gte=timezone.now(),
         ).order_by('date')[:3]
         if not rdvs:
             return {
@@ -207,9 +377,9 @@ class ChatbotEngine:
             }
         reponse = "Voici vos rendez-vous a venir :\n\n"
         for rdv in rdvs:
-            date_fr = rdv.date.strftime('%d/%m/%Y a %H:%M')
+            date_fr = timezone.localtime(rdv.date).strftime('%d/%m/%Y a %H:%M')
             reponse += f"- {rdv.titre} — {date_fr}\n"
-        reponse += "\nGerer mes rendez-vous : /mes-rendez-vous/"
+        reponse += f"\n{LIEN_MES_RDV}"
         return {
             'reponse': reponse,
             'action': 'redirect_mes_rdv',
@@ -245,7 +415,7 @@ class ChatbotEngine:
                 "Contactez-nous immediatement :\n"
                 "Telephone : 05 22 XX XX XX\n"
                 "Email : urgence@cabinet-dentaire.ma\n\n"
-                "Prendre un RDV urgent : /rdv/create/?urgent=1"
+                f"Besoin urgent ? {LIEN_RDV}"
             ),
             'action': 'urgence_detectee',
             'suggestions': ['Appeler le cabinet', 'Prendre RDV urgent'],
@@ -255,35 +425,28 @@ class ChatbotEngine:
 
     def _handle_services(self, texte, utilisateur):
         services = Service.objects.all()
-        service_keywords = {
-            'consultation': 'consultation', 'detartrage': 'detartrage',
-            'blanchiment': 'blanchiment', 'implant': 'implant',
-            'orthodontie': 'orthodontie', 'carie': 'carie',
-            'extraction': 'extraction', 'couronne': 'couronne',
-        }
-        service_demande = None
-        for mot, slug in service_keywords.items():
-            if mot in texte.lower():
-                service_demande = slug
-                break
-        if service_demande:
-            faqs = self.rechercher_faq(texte, categorie='services', limite=2)
-            if faqs:
-                faq = faqs[0]
-                faq.incrementer_usage()
-                return {
-                    'reponse': f"{faq.question}\n\n{faq.reponse}\n\n"
-                               f"Voir tous nos services : /soins-et-services/\n"
-                               f"Prendre un RDV : /rdv/create/",
-                    'suggestions': ['Prendre un RDV', 'Tarifs', 'Horaires'],
-                    'confiance': 0.9,
-                    'sources': [faq.question],
-                }
+        faqs = self.rechercher_faq(texte, categorie='services', limite=1)
+        if faqs:
+            faq = faqs[0]
+            faq.incrementer_usage()
+            return {
+                'reponse': (
+                    f"{faq.question}\n\n{faq.reponse}\n\n"
+                    f"{LIEN_SERVICES}\n"
+                    f"{LIEN_RDV}"
+                ),
+                'suggestions': ['Prendre un RDV', 'Tarifs', 'Horaires'],
+                'confiance': 0.9,
+                'sources': [faq.question],
+            }
         reponse = "Nos services dentaires\n\n"
         for svc in services[:6]:
-            reponse += f"- {svc.nom} — {svc.duree_minutes} min\n"
-        reponse += "\nDecouvrir tous nos services : /soins-et-services/\n"
-        reponse += "Prendre un rendez-vous : /rdv/create/"
+            duree = getattr(svc, 'duree_minutes', 30)
+            reponse += f"- {svc.nom} — {duree} min\n"
+        if not services.exists():
+            reponse += "- Consultation generale\n- Detartrage\n- Soins conservateurs\n"
+        reponse += f"\n{LIEN_SERVICES}\n"
+        reponse += LIEN_RDV
         return {
             'reponse': reponse,
             'suggestions': ['Consultation', 'Detartrage', 'Implants', 'Prendre un RDV'],
@@ -305,7 +468,7 @@ class ChatbotEngine:
                 "- Detartrage : 30€ – 50€\n"
                 "- Carie simple : 40€ – 80€\n\n"
             )
-        reponse += "Demander un devis : /contact/"
+        reponse += LIEN_RDV
         return {
             'reponse': reponse,
             'suggestions': ['Prendre un RDV', 'Voir les services', 'Horaires'],
@@ -314,30 +477,17 @@ class ChatbotEngine:
         }
 
     def _handle_horaires(self, texte, utilisateur):
-        now = timezone.localtime()
-        jour_semaine = now.weekday()
-        heure = now.hour
-        horaires = {
-            0: ("8h30", "18h30"), 1: ("8h30", "18h30"), 2: ("8h30", "18h30"),
-            3: ("8h30", "18h30"), 4: ("8h30", "12h30"), 5: ("Ferme", ""), 6: ("Ferme", ""),
-        }
-        jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
         reponse = "Horaires d'ouverture\n\n"
-        for i, (ouv, fer) in horaires.items():
-            if ouv == "Ferme":
-                reponse += f"- {jours[i]} : Ferme\n"
+        for i, (ouv, fer) in self.HORAIRES_CABINET.items():
+            if ouv == 'Ferme':
+                reponse += f"- {self.JOURS[i]} : Ferme\n"
             else:
-                reponse += f"- {jours[i]} : {ouv} – {fer}\n"
-        if jour_semaine < 4:
-            ouv_h = int(horaires[jour_semaine][0].split('h')[0])
-            fer_h = int(horaires[jour_semaine][1].split('h')[0])
-            if ouv_h <= heure < fer_h:
-                reponse += "\nNous sommes ouverts en ce moment !"
-            else:
-                reponse += "\nNous sommes actuellement fermes."
+                reponse += f"- {self.JOURS[i]} : {ouv} – {fer}\n"
+        if self._cabinet_ouvert_maintenant():
+            reponse += "\nNous sommes ouverts en ce moment !"
         else:
             reponse += "\nNous sommes actuellement fermes."
-        reponse += "\n\nPrendre un rendez-vous : /rdv/create/"
+        reponse += f"\n\n{LIEN_RDV}"
         return {
             'reponse': reponse,
             'suggestions': ['Prendre un RDV', 'Urgence', 'Services'],
@@ -366,8 +516,8 @@ class ChatbotEngine:
                 "Telephone : 05 22 XX XX XX\n"
                 "Email : contact@cabinet-dentaire.ma\n"
                 "WhatsApp : 06 XX XX XX XX\n\n"
-                "Formulaire de contact : /contact/\n"
-                "Prendre un RDV : /rdv/create/"
+                f"{LIEN_RDV}\n"
+                f"{LIEN_CONNEXION}"
             ),
             'suggestions': ['Prendre un RDV', 'Urgence', 'Horaires'],
             'confiance': 0.95,
@@ -384,7 +534,6 @@ class ChatbotEngine:
             reponse += (
                 "Pour votre premiere consultation, apportez :\n\n"
                 "- Carte d'identite\n"
-                "- Carte Vitale\n"
                 "- Carte de mutuelle\n"
                 "- Derniers radios dentaires\n"
                 "- Liste de vos medicaments\n\n"
@@ -419,24 +568,34 @@ class ChatbotEngine:
         }
 
     def _handle_file_attente(self, texte, utilisateur):
-        en_attente = Rendez_vous.objects.filter(status='pending').count()
-        urgents = Rendez_vous.objects.filter(status='pending', priority='urgent').count()
-        reponse = (
-            "File d'attente actuelle\n\n"
-            f"- {en_attente} patient(s) en attente\n"
-            f"- {urgents} cas urgent(s) prioritaires\n\n"
-        )
+        reponse = "File d'attente\n\n"
         if utilisateur and utilisateur.is_authenticated:
+            rdv_called = Rendez_vous.objects.filter(
+                utilisateur=utilisateur, status='confirmed',
+            ).order_by('date').first()
+            if rdv_called:
+                reponse += (
+                    "Vous etes appele(e) ! Presentez-vous au cabinet.\n\n"
+                )
             rdv_user = Rendez_vous.objects.filter(
-                utilisateur=utilisateur, status='pending'
+                utilisateur=utilisateur, status='pending',
             ).order_by('date').first()
             if rdv_user:
                 position = self._calculer_position(rdv_user)
-                reponse += f"Votre position : #{position}\n\n"
-        reponse += "Voir la file complete : /file-dattente/"
+                if position:
+                    reponse += f"Votre position dans la file : #{position}\n\n"
+            elif not rdv_called:
+                reponse += "Vous n'avez pas de rendez-vous en attente.\n\n"
+            reponse += LIEN_FILE
+        else:
+            reponse += (
+                "Connectez-vous pour voir votre position dans la file.\n\n"
+                f"{LIEN_CONNEXION}"
+            )
         return {
             'reponse': reponse,
-            'suggestions': ['Prendre un RDV', 'Mes RDV', 'Urgence'],
+            'action': 'redirect_login' if not (utilisateur and utilisateur.is_authenticated) else None,
+            'suggestions': ['Se connecter', 'Prendre un RDV', 'Mes RDV'],
             'confiance': 0.85,
         }
 
@@ -445,11 +604,11 @@ class ChatbotEngine:
             return {
                 'reponse': (
                     f"Votre compte\n\n"
-                    f"Connecte : {utilisateur.email}\n\n"
-                    f"Mon espace : /extranet/\n"
-                    f"Mes RDV : /mes-rendez-vous/\n"
-                    f"Prendre un RDV : /rdv/create/\n"
-                    f"Deconnexion : /logout/"
+                    f"Connecte : {utilisateur.email or utilisateur.username}\n\n"
+                    f"{LIEN_EXTRANET}\n"
+                    f"{LIEN_MES_RDV}\n"
+                    f"{LIEN_RDV}\n"
+                    f"{LIEN_DECONNEXION}"
                 ),
                 'suggestions': ['Mes RDV', 'Prendre un RDV'],
                 'confiance': 0.9,
@@ -461,8 +620,8 @@ class ChatbotEngine:
                 "- Prendre et gerer vos rendez-vous\n"
                 "- Voir votre historique\n"
                 "- Consulter votre file d'attente\n\n"
-                "Se connecter : /login/\n\n"
-                "Pas d'inscription publique : demandez un acces au cabinet."
+                f"{LIEN_CONNEXION}\n\n"
+                "Pas d'inscription publique : demandez un accès au cabinet."
             ),
             'action': 'redirect_login',
             'suggestions': ['Se connecter', 'Contact'],
@@ -493,27 +652,12 @@ class ChatbotEngine:
             'confiance': 0.3,
         }
 
-    def _get_prochains_creneaux(self):
-        now = timezone.localtime()
-        resultats = []
-        for i in range(1, 8):
-            date = now + timedelta(days=i)
-            if date.weekday() < 5:
-                nom_jour = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'][date.weekday()]
-                resultats.append((f"{nom_jour} {date.day}/{date.month}", "09:00"))
-                if date.weekday() < 4:
-                    resultats.append((f"{nom_jour} {date.day}/{date.month}", "14:00"))
-            if len(resultats) >= 5:
-                break
-        return resultats
+    def _queue_ordered(self):
+        qs = Rendez_vous.objects.filter(status='pending')
+        return sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
 
     def _calculer_position(self, rdv):
-        position = Rendez_vous.objects.filter(
-            status='pending', priority='urgent', created_at__lt=rdv.created_at
-        ).count()
-        if rdv.priority != 'urgent':
-            position += Rendez_vous.objects.filter(status='pending', priority='urgent').count()
-            position += Rendez_vous.objects.filter(
-                status='pending', priority__in=['normal', 'control'], created_at__lt=rdv.created_at
-            ).count()
-        return position + 1
+        for i, item in enumerate(self._queue_ordered(), 1):
+            if item.pk == rdv.pk:
+                return i
+        return None

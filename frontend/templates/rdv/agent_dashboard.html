@@ -35,7 +35,7 @@
 <div class="agent-hero d-flex flex-wrap justify-content-between align-items-start gap-3">
   <div>
     <h1>Tableau de bord réception</h1>
-    <p class="agent-sub">Gérez les rendez-vous du jour et la file d'attente. Appelez les patients dans l'ordre.</p>
+    <p class="agent-sub">Étape 1 : <strong>Appeler</strong> le patient · Étape 2 : <strong>Confirmer le passage</strong> une fois reçu au cabinet.</p>
   </div>
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <a class="btn btn-file" href="{% url 'agent_file_attente' %}">Voir la file d'attente</a>
@@ -61,7 +61,11 @@
   </div>
   <div class="stat-card">
     <div class="stat-value">{{ en_attente_count }}</div>
-    <div class="stat-label">En attente</div>
+    <div class="stat-label">En attente (file)</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ appelles_count }}</div>
+    <div class="stat-label">Appelés — en attente passage</div>
   </div>
 </div>
 
@@ -80,6 +84,7 @@
       {% csrf_token %}
       <button type="submit" class="btn btn-appeler">Appeler ce patient</button>
     </form>
+    <p class="text-muted small mb-0 mt-2">Après l'appel, confirmez le passage depuis le tableau ou la file d'attente.</p>
   </div>
 {% endif %}
 
@@ -107,16 +112,35 @@
               <td>{{ entry.patient_name }}</td>
               <td><span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span></td>
               <td>{% if entry.rdv.service %}{{ entry.rdv.service.nom }}{% else %}—{% endif %}</td>
-              <td><span class="badge badge-custom badge-{{ entry.rdv.status }}">{{ entry.rdv.get_status_display }}</span></td>
               <td>
-                {% if entry.rdv.status != 'done' and entry.rdv.status != 'cancelled' %}
-                  <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
+                {% if entry.rdv.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">En attente</span>
+                {% elif entry.rdv.status == 'confirmed' %}
+                  <span class="badge bg-info text-dark">Appelé</span>
+                {% elif entry.rdv.status == 'done' %}
+                  <span class="badge bg-secondary">Terminé</span>
+                {% else %}
+                  <span class="badge badge-custom badge-{{ entry.rdv.status }}">{{ entry.rdv.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if entry.rdv.status == 'pending' %}
+                  <form method="post" action="{% url 'agent_appeler_rdv' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-success me-1">Valider</button>
+                    <button type="submit" class="btn btn-sm btn-primary me-1">Appeler</button>
                   </form>
                   <form method="post" action="{% url 'rdv_annuler' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>
+                  </form>
+                {% elif entry.rdv.status == 'confirmed' %}
+                  <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success me-1">Confirmer passage chez le médecin</button>
+                  </form>
+                  <form method="post" action="{% url 'rdv_annuler' entry.rdv.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>
                   </form>
                 {% else %}
                   —

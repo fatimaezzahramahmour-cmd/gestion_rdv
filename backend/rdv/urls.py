@@ -8,6 +8,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('agent/dashboard/', views.agent_dashboard, name='agent_dashboard'),
     path('agent/file-dattente/', views.agent_file_attente_view, name='agent_file_attente'),
+    path('agent/rdv/<int:pk>/appeler/', views.agent_appeler_rdv, name='agent_appeler_rdv'),
     path('agent/rdv/<int:pk>/valider/', views.rdv_valider, name='rdv_valider'),
     path('agent/rdv/<int:pk>/annuler/', views.rdv_annuler, name='rdv_annuler'),
     path('agent/appeler-prochain/', views.agent_appeler_prochain, name='agent_appeler_prochain'),

@@ -67,8 +67,13 @@ _extra = os.environ.get('DJANGO_ALLOWED_HOSTS', '').strip()
 if _extra:
     ALLOWED_HOSTS.extend(h.strip() for h in _extra.split(',') if h.strip())
 
+# Accès local (évite CSRF invalid si on alterne localhost / Tailscale)
+for _local in ('127.0.0.1', 'localhost'):
+    if _local not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_local)
+
 # ============================================
-# 4. CSRF TRUSTED ORIGINS (Tailscale)
+# 4. CSRF TRUSTED ORIGINS (Tailscale + local)
 # ============================================
 
 _csrf = os.environ.get('CSRF_TRUSTED_ORIGINS', '').strip()
@@ -79,6 +84,15 @@ for _ip in _all_tailscale_ips:
     for _origin in (f'http://{_ip}:8000', f'https://{_ip}:8000'):
         if _origin not in CSRF_TRUSTED_ORIGINS:
             CSRF_TRUSTED_ORIGINS.append(_origin)
+
+# Toutes les origines des hôtes autorisés (port dev 8000)
+for _host in ALLOWED_HOSTS:
+    if not _host or _host == '*':
+        continue
+    for _scheme in ('http', 'https'):
+        for _origin in (f'{_scheme}://{_host}:8000', f'{_scheme}://{_host}'):
+            if _origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_origin)
 
 # ============================================
 # 5. COOKIES & SECURITE DE BASE
@@ -243,6 +257,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/extranet/'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+CSRF_FAILURE_VIEW = 'rdv.views.csrf_failure'
 
 # ============================================
 # 14. AXES (Protection brute force)
