@@ -10,9 +10,12 @@
 .page-agent-dashboard .agent-hero h1 { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin: 0 0 0.35rem 0; letter-spacing: -0.02em; }
 .page-agent-dashboard .agent-hero .agent-sub { color: #64748b; font-size: 0.9375rem; margin: 0; }
 .page-agent-dashboard .stats-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+.page-agent-dashboard .stats-date-ref { font-size: 0.8125rem; color: #64748b; margin: -0.5rem 0 1rem 0; font-weight: 500; }
 .page-agent-dashboard .stat-card { flex: 1; min-width: 140px; background: #fff; border-radius: 12px; padding: 1rem 1.25rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
 .page-agent-dashboard .stat-card .stat-value { font-size: 1.5rem; font-weight: 700; color: #15803d; line-height: 1.2; }
-.page-agent-dashboard .stat-card .stat-label { font-size: 0.8125rem; color: #64748b; margin-top: 0.25rem; }
+.page-agent-dashboard .stat-card .stat-label { font-size: 0.8125rem; color: #64748b; margin-top: 0.25rem; line-height: 1.35; }
+.page-agent-dashboard .stat-card.stat-card--warn .stat-value { color: #b45309; }
+.page-agent-dashboard .stat-card.stat-card--info .stat-value { color: #0284c7; }
 .page-agent-dashboard .card-prochain { border-radius: 14px; border-left: 4px solid #15803d; padding: 1.5rem 1.75rem; margin-bottom: 1.5rem; background: linear-gradient(90deg, rgba(21,128,61,.06) 0%, #fff 120px); }
 .page-agent-dashboard .card-prochain h3 { font-size: 0.875rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin: 0 0 0.5rem 0; }
 .page-agent-dashboard .card-prochain .prochain-name { font-size: 1.125rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
@@ -32,10 +35,12 @@
 {% endblock %}
 
 {% block content %}
+{% if prochain and prochain_pas_aujourdhui %}
+<div class="d-none" data-flash-tags="warning" data-flash-text="Ce patient est en attente pour une autre date que celle du jour ({{ date_jour_label }}). Les actions ne sont possibles qu'au jour et à l'heure du rendez-vous."></div>
+{% endif %}
 <div class="agent-hero d-flex flex-wrap justify-content-between align-items-start gap-3">
   <div>
     <h1>Tableau de bord réception</h1>
-    <p class="agent-sub">Étape 1 : <strong>Appeler</strong> le patient · Étape 2 : <strong>Confirmer le passage</strong> une fois reçu au cabinet.</p>
   </div>
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <a class="btn btn-file" href="{% url 'agent_file_attente' %}">Voir la file d'attente</a>
@@ -46,50 +51,46 @@
   </div>
 </div>
 
-{% if messages %}
-  <div class="mb-3">
-    {% for m in messages %}
-      <div class="alert alert-success alert-custom mb-2">{{ m }}</div>
-    {% endfor %}
-  </div>
-{% endif %}
+<div class="stats-date-ref">Indicateurs pour le <strong>{{ date_jour_label }}</strong> (fuseau cabinet)</div>
 
 <div class="stats-row">
   <div class="stat-card">
     <div class="stat-value">{{ count_rdv_jour }}</div>
-    <div class="stat-label">Rendez-vous aujourd'hui <span class="text-muted fw-normal">({{ date_jour_label }})</span></div>
+    <div class="stat-label">RDV aujourd'hui<br><span class="text-muted fw-normal">Non annulés · {{ date_jour_label }}</span></div>
+  </div>
+  <div class="stat-card stat-card--warn">
+    <div class="stat-value">{{ en_attente_aujourdhui_count }}</div>
+    <div class="stat-label">En attente aujourd'hui<br><span class="text-muted fw-normal">RDV du {{ date_jour_label }} en file</span></div>
   </div>
   <div class="stat-card">
-    <div class="stat-value">{{ en_attente_count }}</div>
-    <div class="stat-label">En attente (file)</div>
+    <div class="stat-value">{{ en_attente_total_count }}</div>
+    <div class="stat-label">En attente total<br><span class="text-muted fw-normal">Toutes dates (file complète)</span></div>
   </div>
-  <div class="stat-card">
-    <div class="stat-value">{{ appelles_count }}</div>
-    <div class="stat-label">Appelés — en attente passage</div>
+  <div class="stat-card stat-card--info">
+    <div class="stat-value">{{ appelles_aujourdhui_count }}</div>
+    <div class="stat-label">Appelés aujourd'hui<br><span class="text-muted fw-normal">En attente de passage · {{ date_jour_label }}</span></div>
   </div>
 </div>
 
 {% if prochain %}
   <div class="card-custom card-prochain">
     <h3>Prochain dans la file d'attente</h3>
-    {% if prochain_pas_aujourdhui %}
-    <div class="alert alert-warning py-2 px-3 mb-3 small mb-2" role="status">
-      Ce patient est <strong>en attente</strong> pour une autre date que celle du jour ({{ date_jour_label }}).
-      « Rendez-vous aujourd'hui » compte uniquement les RDV prévus <strong>aujourd'hui</strong>.
-    </div>
-    {% endif %}
     <div class="prochain-name">{{ prochain_name|default:prochain.utilisateur.username }}</div>
     <div class="prochain-meta">{{ prochain.titre }} — {{ prochain.date|date:"d/m/Y à H:i" }}{% if prochain.service %} · {{ prochain.service.nom }}{% endif %}</div>
+    {% if prochain_peut_appeler %}
     <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
       {% csrf_token %}
       <button type="submit" class="btn btn-appeler">Appeler ce patient</button>
     </form>
-    <p class="text-muted small mb-0 mt-2">Après l'appel, confirmez le passage depuis le tableau ou la file d'attente.</p>
+    {% elif prochain_msg_appeler %}
+    <button type="button" class="btn btn-appeler btn-extranet-toast-hint" data-extranet-toast="{{ prochain_msg_appeler }}" data-toast-type="warning">Appeler ce patient</button>
+    {% endif %}
+    <p class="text-muted small mb-0 mt-2">Après l'appel, confirmez le passage depuis le tableau ou la file d'attente (à l'heure du RDV).</p>
   </div>
 {% endif %}
 
 <div class="card-custom card-rdv-jour">
-  <div class="card-header">Rendez-vous du jour</div>
+  <div class="card-header">Rendez-vous du jour — {{ date_jour_label }}</div>
   {% if rdv_du_jour %}
     <div class="table-responsive">
       <table class="table table-hover mb-0">
@@ -125,19 +126,27 @@
               </td>
               <td>
                 {% if entry.rdv.status == 'pending' %}
+                  {% if entry.peut_appeler %}
                   <form method="post" action="{% url 'agent_appeler_rdv' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-primary me-1">Appeler</button>
                   </form>
+                  {% elif entry.msg_appeler %}
+                  <button type="button" class="btn btn-sm btn-primary me-1 btn-extranet-toast-hint" data-extranet-toast="{{ entry.msg_appeler }}" data-toast-type="warning">Appeler</button>
+                  {% endif %}
                   <form method="post" action="{% url 'rdv_annuler' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>
                   </form>
                 {% elif entry.rdv.status == 'confirmed' %}
+                  {% if entry.peut_confirmer %}
                   <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-success me-1">Confirmer passage chez le médecin</button>
                   </form>
+                  {% elif entry.msg_confirmer %}
+                  <button type="button" class="btn btn-sm btn-success me-1 btn-extranet-toast-hint" data-extranet-toast="{{ entry.msg_confirmer }}" data-toast-type="warning">Confirmer passage chez le médecin</button>
+                  {% endif %}
                   <form method="post" action="{% url 'rdv_annuler' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler</button>

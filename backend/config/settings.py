@@ -259,6 +259,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/extranet/'
+LOGOUT_REDIRECT_URL = '/'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
 CSRF_FAILURE_VIEW = 'rdv.views.csrf_failure'
 

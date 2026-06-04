@@ -45,6 +45,53 @@ def patient_peut_modifier_ou_annuler(rdv):
     limite = _maintenant_utc() + timedelta(hours=DELAI_PATIENT_MODIFICATION_HEURES)
     return rdv.date > limite
 
+
+def rdv_datetime_cabinet(rdv):
+    """Date/heure du RDV au fuseau du cabinet."""
+    return timezone.localtime(rdv.date, _TZ_CABINET)
+
+
+def agent_peut_appeler_rdv(rdv):
+    """Réception : appeler uniquement le jour du RDV (date civile cabinet)."""
+    if rdv.status != 'pending':
+        return False
+    return rdv_datetime_cabinet(rdv).date() == cabinet_local_today()
+
+
+def agent_message_si_appeler_indisponible(rdv):
+    """Message si l'appel n'est pas encore autorisé."""
+    if rdv.status != 'pending':
+        return None
+    rdv_local = rdv_datetime_cabinet(rdv)
+    if rdv_local.date() == cabinet_local_today():
+        return None
+    return (
+        f"Appel possible le {rdv_local.strftime('%d/%m/%Y')} "
+        f"(jour du RDV, {rdv_local.strftime('%H:%M')})."
+    )
+
+
+def agent_peut_confirmer_passage(rdv):
+    """Réception : passage médecin à partir de l'heure prévue du RDV."""
+    if rdv.status != 'confirmed':
+        return False
+    now_cabinet = timezone.localtime(timezone.now(), _TZ_CABINET)
+    return now_cabinet >= rdv_datetime_cabinet(rdv)
+
+
+def agent_message_si_passage_indisponible(rdv):
+    """Message si la confirmation de passage n'est pas encore autorisée."""
+    if rdv.status != 'confirmed':
+        return None
+    now_cabinet = timezone.localtime(timezone.now(), _TZ_CABINET)
+    rdv_local = rdv_datetime_cabinet(rdv)
+    if now_cabinet >= rdv_local:
+        return None
+    return (
+        f"Passage confirmable à partir du {rdv_local.strftime('%d/%m/%Y à %H:%M')} "
+        f"(heure du rendez-vous)."
+    )
+
 JOURS_NOMS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
 # Horaires de RDV (~50 min) — matin puis après-midi

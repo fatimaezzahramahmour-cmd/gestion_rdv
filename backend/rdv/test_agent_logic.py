@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import Client, TestCase
+from django.utils import timezone
 
 from .forms import cabinet_local_today, cabinet_day_datetime_bounds
 from .models import Rendez_vous, ensure_patient_for_user
@@ -106,6 +107,77 @@ class AgentWorkflowTests(TestCase):
         self._login_agent()
         prochain = Rendez_vous.objects.next_in_queue_agent_global()
         self.assertEqual(prochain.pk, self.rdv_today.pk)
+
+    def test_dashboard_stats_today_vs_total_pending(self):
+        """En attente aujourd'hui ≠ total si des RDV pending existent à d'autres dates."""
+        self._login_agent()
+        response = self.client.get('/agent/dashboard/')
+        self.assertEqual(response.status_code, 200)
+        ctx = response.context
+        self.assertEqual(ctx['en_attente_aujourdhui_count'], 1)
+        self.assertEqual(ctx['en_attente_total_count'], 2)
+        self.assertEqual(ctx['count_rdv_jour'], 1)
+        self.assertEqual(len(list(ctx['rdv_du_jour_list'])), 1)
+
+    def test_dashboard_rdv_jour_excludes_cancelled(self):
+        self.rdv_today.status = 'cancelled'
+        self.rdv_today.save()
+        self._login_agent()
+        response = self.client.get('/agent/dashboard/')
+        self.assertEqual(response.context['count_rdv_jour'], 0)
+        self.assertEqual(response.context['en_attente_aujourdhui_count'], 0)
+
+    def test_dashboard_shows_date_reference(self):
+        self._login_agent()
+        today = cabinet_local_today()
+        label = today.strftime('%d/%m/%Y')
+        response = self.client.get('/agent/dashboard/')
+        self.assertContains(response, label)
+        self.assertContains(response, 'En attente aujourd')
+        self.assertContains(response, 'En attente total')
+        self.assertContains(response, 'Toutes dates')
+
+    def test_dashboard_appelles_aujourdhui_matches_today_confirmed(self):
+        self.rdv_today.status = 'confirmed'
+        self.rdv_today.save()
+        self._login_agent()
+        response = self.client.get('/agent/dashboard/')
+        self.assertEqual(response.context['appelles_aujourdhui_count'], 1)
+        self.assertEqual(response.context['count_rdv_jour'], 1)
+
+    def test_appeler_future_pending_rejected(self):
+        self._login_agent()
+        response = self.client.post(f'/agent/rdv/{self.rdv_future.pk}/appeler/')
+        self.assertEqual(response.status_code, 302)
+        self.rdv_future.refresh_from_db()
+        self.assertEqual(self.rdv_future.status, 'pending')
+
+    def test_valider_future_confirmed_rejected(self):
+        self.rdv_future.status = 'confirmed'
+        self.rdv_future.save()
+        self._login_agent()
+        response = self.client.post(f'/agent/rdv/{self.rdv_future.pk}/valider/')
+        self.assertEqual(response.status_code, 302)
+        self.rdv_future.refresh_from_db()
+        self.assertEqual(self.rdv_future.status, 'confirmed')
+
+    def test_valider_before_appointment_time_rejected(self):
+        self.rdv_today.status = 'confirmed'
+        self.rdv_today.date = timezone.now() + timedelta(hours=3)
+        self.rdv_today.save()
+        self._login_agent()
+        response = self.client.post(f'/agent/rdv/{self.rdv_today.pk}/valider/')
+        self.rdv_today.refresh_from_db()
+        self.assertEqual(self.rdv_today.status, 'confirmed')
+
+    def test_valider_after_appointment_time_succeeds(self):
+        self.rdv_today.status = 'confirmed'
+        self.rdv_today.date = timezone.now() - timedelta(minutes=15)
+        self.rdv_today.save()
+        self._login_agent()
+        response = self.client.post(f'/agent/rdv/{self.rdv_today.pk}/valider/')
+        self.rdv_today.refresh_from_db()
+        self.assertEqual(self.rdv_today.status, 'done')
 
     def test_patient_sees_called_status_in_file(self):
         self.rdv_today.status = 'confirmed'

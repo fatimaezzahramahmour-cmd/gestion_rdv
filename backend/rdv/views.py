@@ -12,6 +12,10 @@ from .forms import (
     get_creneaux_for_date,
     get_creneaux_table_semaine,
     patient_peut_modifier_ou_annuler,
+    agent_peut_appeler_rdv,
+    agent_peut_confirmer_passage,
+    agent_message_si_appeler_indisponible,
+    agent_message_si_passage_indisponible,
     cabinet_local_today,
     cabinet_day_datetime_bounds,
 )
@@ -47,6 +51,26 @@ def _queue_ordered():
 	"""File d'attente : tous les RDV pending triés (urgent d'abord, puis date, created_at)."""
 	qs = Rendez_vous.objects.filter(status='pending')
 	return sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
+
+
+def _pending_for_day(day):
+	"""RDV pending dont la date tombe le jour `day` (fuseau cabinet)."""
+	start_day, end_day = cabinet_day_datetime_bounds(day)
+	return Rendez_vous.objects.filter(
+		status='pending',
+		date__gte=start_day,
+		date__lt=end_day,
+	)
+
+
+def _rdv_du_jour_queryset(day):
+	"""RDV du jour non annulés (fuseau cabinet)."""
+	start_day, end_day = cabinet_day_datetime_bounds(day)
+	return (
+		Rendez_vous.objects.filter(date__gte=start_day, date__lt=end_day)
+		.exclude(status='cancelled')
+		.order_by('date')
+	)
 
 
 def _confirmed_ordered():
@@ -94,20 +118,27 @@ def agent_dashboard(request):
 		return redirect('extranet')
 
 	today = cabinet_local_today()
-	start_day, end_day = cabinet_day_datetime_bounds(today)
-	rdv_du_jour = (
-		Rendez_vous.objects.filter(date__gte=start_day, date__lt=end_day)
-		.exclude(status='cancelled')
-		.order_by('date')
-	)
+	rdv_du_jour = _rdv_du_jour_queryset(today)
 	prochain = Rendez_vous.objects.next_in_queue_agent_global()
-	en_attente_count = Rendez_vous.objects.filter(status='pending').count()
-	appelles_count = Rendez_vous.objects.filter(status='confirmed').count()
+	en_attente_aujourdhui_count = _pending_for_day(today).count()
+	en_attente_total_count = Rendez_vous.objects.filter(status='pending').count()
+	start_day, end_day = cabinet_day_datetime_bounds(today)
+	appelles_aujourdhui_count = Rendez_vous.objects.filter(
+		status='confirmed',
+		date__gte=start_day,
+		date__lt=end_day,
+	).count()
 
-	rdv_du_jour_with_names = [
-		{'rdv': r, 'patient_name': _patient_display_name(r.utilisateur) or r.utilisateur.username}
-		for r in rdv_du_jour
-	]
+	rdv_du_jour_with_names = []
+	for r in rdv_du_jour:
+		rdv_du_jour_with_names.append({
+			'rdv': r,
+			'patient_name': _patient_display_name(r.utilisateur) or r.utilisateur.username,
+			'peut_appeler': agent_peut_appeler_rdv(r),
+			'peut_confirmer': agent_peut_confirmer_passage(r),
+			'msg_appeler': agent_message_si_appeler_indisponible(r),
+			'msg_confirmer': agent_message_si_passage_indisponible(r),
+		})
 	prochain_name = _patient_display_name(prochain.utilisateur) if prochain else None
 	tz_cab = ZoneInfo(str(dj_settings.TIME_ZONE))
 	prochain_date_cabinet = (
@@ -123,10 +154,13 @@ def agent_dashboard(request):
 		'prochain': prochain,
 		'prochain_name': prochain_name,
 		'count_rdv_jour': rdv_du_jour.count(),
-		'en_attente_count': en_attente_count,
-		'appelles_count': appelles_count,
+		'en_attente_aujourdhui_count': en_attente_aujourdhui_count,
+		'en_attente_total_count': en_attente_total_count,
+		'appelles_aujourdhui_count': appelles_aujourdhui_count,
 		'date_jour_label': today.strftime('%d/%m/%Y'),
 		'prochain_pas_aujourdhui': prochain_pas_aujourdhui,
+		'prochain_peut_appeler': agent_peut_appeler_rdv(prochain) if prochain else False,
+		'prochain_msg_appeler': agent_message_si_appeler_indisponible(prochain) if prochain else None,
 	}
 	return render(request, 'rdv/agent_dashboard.html', context)
 
@@ -141,6 +175,10 @@ def agent_appeler_prochain(request):
 	if next_obj:
 		if next_obj.status != 'pending':
 			messages.error(request, 'Ce rendez-vous ne peut plus être appelé.')
+			return redirect('agent_dashboard')
+		if not agent_peut_appeler_rdv(next_obj):
+			msg = agent_message_si_appeler_indisponible(next_obj)
+			messages.error(request, msg or 'Appel non autorisé pour ce rendez-vous.')
 			return redirect('agent_dashboard')
 		next_obj.status = 'confirmed'
 		next_obj.save()
@@ -169,6 +207,10 @@ def agent_appeler_rdv(request, pk):
 			'Utilisez « Confirmer passage » si le patient est déjà appelé.',
 		)
 		return _agent_redirect_after_action(request)
+	if not agent_peut_appeler_rdv(rdv):
+		msg = agent_message_si_appeler_indisponible(rdv)
+		messages.error(request, msg or 'Appel non autorisé pour ce rendez-vous.')
+		return _agent_redirect_after_action(request)
 	rdv.status = 'confirmed'
 	rdv.save()
 	nom = _patient_display_name(rdv.utilisateur) or rdv.utilisateur.username
@@ -191,6 +233,13 @@ def rdv_valider(request, pk):
 		messages.error(
 			request,
 			'Appelez d\'abord le patient avant de confirmer le passage chez le médecin.',
+		)
+		return _agent_redirect_after_action(request)
+	if not agent_peut_confirmer_passage(rdv):
+		msg = agent_message_si_passage_indisponible(rdv)
+		messages.error(
+			request,
+			msg or 'Le passage chez le médecin n\'est pas encore autorisé pour ce rendez-vous.',
 		)
 		return _agent_redirect_after_action(request)
 	rdv.status = 'done'
@@ -496,6 +545,8 @@ def agent_file_attente_view(request):
 			'rdv': rdv,
 			'position': i,
 			'label': nom,
+			'peut_appeler': agent_peut_appeler_rdv(rdv),
+			'msg_appeler': agent_message_si_appeler_indisponible(rdv),
 		})
 	called_entries = []
 	for rdv in _confirmed_ordered():
@@ -503,6 +554,8 @@ def agent_file_attente_view(request):
 		called_entries.append({
 			'rdv': rdv,
 			'label': nom,
+			'peut_confirmer': agent_peut_confirmer_passage(rdv),
+			'msg_confirmer': agent_message_si_passage_indisponible(rdv),
 		})
 	return render(request, 'rdv/agent_file_attente.html', {
 		'pending_entries': pending_entries,

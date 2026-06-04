@@ -28,18 +28,9 @@
 <div class="agent-page-head d-flex flex-wrap justify-content-between align-items-start gap-3">
   <div>
     <h1>File d'attente</h1>
-    <p class="lead">Étape 1 — <strong>Appeler</strong> le patient · Étape 2 — <strong>Confirmer le passage</strong> chez le médecin.</p>
   </div>
   <a class="btn btn-outline-secondary btn-sm" href="{% url 'agent_dashboard' %}">← Tableau de bord</a>
 </div>
-
-{% if messages %}
-  <div class="mb-3">
-    {% for m in messages %}
-      <div class="alert alert-success alert-custom mb-2">{{ m }}</div>
-    {% endfor %}
-  </div>
-{% endif %}
 
 <h2 class="section-title">En attente — à appeler</h2>
 {% if pending_entries %}
@@ -58,11 +49,15 @@
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span>
               <span class="badge bg-warning text-dark">En attente</span>
+              {% if entry.peut_appeler %}
               <form method="post" action="{% url 'agent_appeler_rdv' entry.rdv.pk %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="file_attente">
                 <button type="submit" class="btn btn-appeler">Appeler le patient</button>
               </form>
+              {% elif entry.msg_appeler %}
+              <button type="button" class="btn btn-appeler btn-extranet-toast-hint" data-extranet-toast="{{ entry.msg_appeler }}" data-toast-type="warning">Appeler le patient</button>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -91,11 +86,15 @@
             </div>
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <span class="badge bg-info text-dark">Appelé</span>
+              {% if entry.peut_confirmer %}
               <form method="post" action="{% url 'rdv_valider' entry.rdv.pk %}" class="d-inline">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="file_attente">
                 <button type="submit" class="btn btn-confirmer">Confirmer passage chez le médecin</button>
               </form>
+              {% elif entry.msg_confirmer %}
+              <button type="button" class="btn btn-confirmer btn-extranet-toast-hint" data-extranet-toast="{{ entry.msg_confirmer }}" data-toast-type="warning">Confirmer passage chez le médecin</button>
+              {% endif %}
             </div>
           </div>
         </div>
