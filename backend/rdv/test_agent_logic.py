@@ -50,6 +50,29 @@ class AgentWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/agent/dashboard/')
 
+    def test_admin_login_redirects_to_admin(self):
+        self.client.logout()
+        response = self.client.post('/login/', {
+            'email': 'admin@admin.com',
+            'password': 'admin123',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/admin/')
+
+    def test_admin_cannot_access_agent_dashboard(self):
+        admin = User.objects.get(username='admin@admin.com')
+        self.client.force_login(admin)
+        response = self.client.get('/agent/dashboard/')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/admin/')
+
+    def test_admin_cannot_access_agent_file_attente(self):
+        admin = User.objects.get(username='admin@admin.com')
+        self.client.force_login(admin)
+        response = self.client.get('/agent/file-dattente/')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/admin/')
+
     def test_patient_cannot_access_agent_dashboard(self):
         self.client.force_login(self.patient)
         response = self.client.get('/agent/dashboard/')
@@ -195,3 +218,24 @@ class AgentWorkflowTests(TestCase):
         response = self.client.get('/agent/file-dattente/')
         self.assertContains(response, 'Appelés')
         self.assertContains(response, 'Confirmer passage chez le médecin')
+
+    def test_agent_button_labels_harmonized(self):
+        """Même action backend = même libellé ; pas de doublon appeler-prochain sur le dashboard."""
+        self._login_agent()
+        dashboard = self.client.get('/agent/dashboard/')
+        self.assertEqual(dashboard.status_code, 200)
+        self.assertEqual(
+            dashboard.content.decode().count('Appeler le patient suivant'),
+            1,
+            'Un seul bouton « Appeler le patient suivant » (carte prochain).',
+        )
+        self.assertNotContains(dashboard, 'Appeler ce patient')
+        self.assertContains(dashboard, 'Appeler le patient')
+        self.assertContains(dashboard, 'Confirmer passage chez le médecin')
+        self.assertNotContains(dashboard, '>Valider<')
+
+        file_attente = self.client.get('/agent/file-dattente/')
+        self.assertEqual(file_attente.status_code, 200)
+        self.assertContains(file_attente, 'Appeler le patient')
+        self.assertContains(file_attente, 'Confirmer passage chez le médecin')
+        self.assertNotContains(file_attente, 'Appeler le patient suivant')

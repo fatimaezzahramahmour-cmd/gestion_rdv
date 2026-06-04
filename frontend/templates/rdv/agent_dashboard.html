@@ -44,10 +44,6 @@
   </div>
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <a class="btn btn-file" href="{% url 'agent_file_attente' %}">Voir la file d'attente</a>
-    <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-primary btn-custom btn-primary-custom">Appeler le patient suivant</button>
-    </form>
   </div>
 </div>
 
@@ -80,10 +76,10 @@
     {% if prochain_peut_appeler %}
     <form method="post" action="{% url 'agent_appeler_prochain' %}" class="d-inline">
       {% csrf_token %}
-      <button type="submit" class="btn btn-appeler">Appeler ce patient</button>
+      <button type="submit" class="btn btn-appeler">Appeler le patient suivant</button>
     </form>
     {% elif prochain_msg_appeler %}
-    <button type="button" class="btn btn-appeler btn-extranet-toast-hint" data-extranet-toast="{{ prochain_msg_appeler }}" data-toast-type="warning">Appeler ce patient</button>
+    <button type="button" class="btn btn-appeler btn-extranet-toast-hint" data-extranet-toast="{{ prochain_msg_appeler }}" data-toast-type="warning">Appeler le patient suivant</button>
     {% endif %}
     <p class="text-muted small mb-0 mt-2">Après l'appel, confirmez le passage depuis le tableau ou la file d'attente (à l'heure du RDV).</p>
   </div>
@@ -129,10 +125,10 @@
                   {% if entry.peut_appeler %}
                   <form method="post" action="{% url 'agent_appeler_rdv' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-primary me-1">Appeler</button>
+                    <button type="submit" class="btn btn-sm btn-primary me-1">Appeler le patient</button>
                   </form>
                   {% elif entry.msg_appeler %}
-                  <button type="button" class="btn btn-sm btn-primary me-1 btn-extranet-toast-hint" data-extranet-toast="{{ entry.msg_appeler }}" data-toast-type="warning">Appeler</button>
+                  <button type="button" class="btn btn-sm btn-primary me-1 btn-extranet-toast-hint" data-extranet-toast="{{ entry.msg_appeler }}" data-toast-type="warning">Appeler le patient</button>
                   {% endif %}
                   <form method="post" action="{% url 'rdv_annuler' entry.rdv.pk %}" class="d-inline">
                     {% csrf_token %}

@@ -34,6 +34,9 @@ def _is_admin(user):
 
 
 def _is_agent(user):
+	"""True uniquement si role=agent ; is_staff seul ne donne pas accès à /agent/*."""
+	if not user.is_authenticated:
+		return False
 	profile = getattr(user, 'profile', None)
 	return bool(profile and profile.role == 'agent')
 
@@ -45,6 +48,15 @@ def _redirect_non_patient(request):
 	if _is_agent(request.user):
 		return redirect('agent_dashboard')
 	return None
+
+
+def _redirect_non_agent(request):
+	"""Redirige hors de l'espace agent si role≠agent (admin/staff → /admin/)."""
+	if _is_agent(request.user):
+		return None
+	if _is_admin(request.user) or request.user.is_staff:
+		return redirect('/admin/')
+	return redirect('extranet')
 
 
 def _queue_ordered():
@@ -114,8 +126,9 @@ def accueil(request):
 @login_required
 def agent_dashboard(request):
 	"""Agent: RDV du jour, appeler prochain, valider/annuler."""
-	if not _is_agent(request.user):
-		return redirect('extranet')
+	redirect_resp = _redirect_non_agent(request)
+	if redirect_resp:
+		return redirect_resp
 
 	today = cabinet_local_today()
 	rdv_du_jour = _rdv_du_jour_queryset(today)
@@ -169,8 +182,9 @@ def agent_dashboard(request):
 @require_POST
 def agent_appeler_prochain(request):
 	"""Appel du prochain patient : pending → confirmed."""
-	if not _is_agent(request.user):
-		return redirect('extranet')
+	redirect_resp = _redirect_non_agent(request)
+	if redirect_resp:
+		return redirect_resp
 	next_obj = Rendez_vous.objects.next_in_queue_agent_global()
 	if next_obj:
 		if next_obj.status != 'pending':
@@ -197,14 +211,15 @@ def agent_appeler_prochain(request):
 @require_POST
 def agent_appeler_rdv(request, pk):
 	"""Appeler un patient précis : pending → confirmed."""
-	if not _is_agent(request.user):
-		return redirect('extranet')
+	redirect_resp = _redirect_non_agent(request)
+	if redirect_resp:
+		return redirect_resp
 	rdv = get_object_or_404(Rendez_vous, pk=pk)
 	if rdv.status != 'pending':
 		messages.error(
 			request,
 			'Seuls les rendez-vous « En attente » peuvent être appelés. '
-			'Utilisez « Confirmer passage » si le patient est déjà appelé.',
+			'Utilisez « Confirmer passage chez le médecin » si le patient est déjà appelé.',
 		)
 		return _agent_redirect_after_action(request)
 	if not agent_peut_appeler_rdv(rdv):
@@ -226,8 +241,9 @@ def agent_appeler_rdv(request, pk):
 @require_POST
 def rdv_valider(request, pk):
 	"""Confirmer passage chez le médecin : confirmed → done uniquement."""
-	if not _is_agent(request.user):
-		return redirect('extranet')
+	redirect_resp = _redirect_non_agent(request)
+	if redirect_resp:
+		return redirect_resp
 	rdv = get_object_or_404(Rendez_vous, pk=pk)
 	if rdv.status != 'confirmed':
 		messages.error(
@@ -253,8 +269,9 @@ def rdv_valider(request, pk):
 @require_POST
 def rdv_annuler(request, pk):
 	"""Annuler un RDV."""
-	if not _is_agent(request.user):
-		return redirect('extranet')
+	redirect_resp = _redirect_non_agent(request)
+	if redirect_resp:
+		return redirect_resp
 	rdv = get_object_or_404(Rendez_vous, pk=pk)
 	rdv.status = 'cancelled'
 	rdv.save()
@@ -536,8 +553,9 @@ def file_attente_view(request):
 @login_required
 def agent_file_attente_view(request):
 	"""File d'attente agent : pending (appeler) + confirmed (confirmer passage)."""
-	if not _is_agent(request.user):
-		return redirect('extranet')
+	redirect_resp = _redirect_non_agent(request)
+	if redirect_resp:
+		return redirect_resp
 	pending_entries = []
 	for i, rdv in enumerate(_queue_ordered(), 1):
 		nom = _patient_display_name(rdv.utilisateur)
