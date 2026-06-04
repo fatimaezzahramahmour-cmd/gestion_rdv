@@ -1,0 +1,28 @@
+<section class="admin-filters-panel" aria-label="Filtres">
+
+  <div class="admin-filters-toolbar">
+
+    {% for dd in admin_filter_dropdowns %}
+
+    <div class="admin-filter-field">
+
+      <label class="admin-filters-label" for="{{ dd.id }}">{{ dd.label }}</label>
+
+      <select id="{{ dd.id }}" class="admin-filter-select" data-auto-nav="1" aria-label="{{ dd.label }}">
+
+        {% for opt in dd.options %}
+
+        <option value="{{ opt.href }}"{% if opt.selected %} selected{% endif %}>{{ opt.label }}</option>
+
+        {% endfor %}
+
+      </select>
+
+    </div>
+
+    {% endfor %}
+
+  </div>
+
+</section>
+

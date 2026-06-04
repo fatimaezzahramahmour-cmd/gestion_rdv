@@ -292,3 +292,34 @@ class ChatbotReliabilityTests(TestCase):
         self.assertEqual(data['messages'][0]['role'], 'user')
         self.assertEqual(data['messages'][1]['role'], 'assistant')
         self.assertTrue(data['messages'][1]['contenu'].strip())
+
+
+class AdminCompteCreateTests(TestCase):
+    """Création compte agent/patient via Django admin (sans doublon profil)."""
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.get(username='admin@admin.com')
+        self.client.force_login(self.admin)
+
+    def test_admin_add_agent_compte(self):
+        email = 'nouvel.agent@test.com'
+        response = self.client.post('/admin/rdv/utilisateur/add/', {
+            'email': email,
+            'password': 'Secret123!',
+            'nom': 'Agent Nouveau',
+            'role': 'agent',
+        }, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Utilisateur.objects.filter(user__email=email).count(), 1)
+        profile = Utilisateur.objects.get(user__email=email)
+        self.assertEqual(profile.role, 'agent')
+        self.assertEqual(profile.nom, 'Agent Nouveau')
+
+    def test_admin_menu_lists_comptes_and_file(self):
+        response = self.client.get('/admin/')
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('Comptes', content)
+        self.assertIn("File d'attente", content)
+        self.assertNotIn('FAQ dentaires', content)

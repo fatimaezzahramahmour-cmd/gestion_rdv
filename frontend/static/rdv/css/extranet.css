@@ -32,12 +32,7 @@ body.extranet-app {
   --patient-accent-border: rgba(20, 184, 166, 0.35);
 }
 
-.espace-admin.extranet-app {
-  --patient-accent: #3b82f6;
-  --patient-accent-hover: #2563eb;
-  --patient-accent-soft: rgba(59, 130, 246, 0.12);
-  --patient-accent-border: rgba(59, 130, 246, 0.35);
-}
+/* Admin : même thème vert que l'espace patient (pas de surcharge bleue) */
 
 .extranet-layout { display: flex; min-height: 100vh; }
 

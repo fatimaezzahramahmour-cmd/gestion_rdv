@@ -1,0 +1,40 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content %}
+  <div class="admin-page-head">
+    <h1>File d'attente</h1>
+    <p class="admin-page-head-hint">Consultation seule — la réception modifie les rendez-vous.</p>
+  </div>
+
+  <div id="content-main" class="admin-list-page admin-file-attente-list">
+    {% if cl.formset and cl.formset.errors %}
+      <p class="errornote">
+        {% if cl.formset.total_error_count == 1 %}
+          Veuillez corriger l'erreur ci-dessous.
+        {% else %}
+          Veuillez corriger les erreurs ci-dessous.
+        {% endif %}
+      </p>
+      {{ cl.formset.non_form_errors }}
+    {% endif %}
+
+    <div id="changelist" class="admin-changelist-card">
+      <div class="changelist-form-container">
+        {% include "admin/includes/admin_filters_toolbar.html" %}
+        <form id="changelist-form" method="post" novalidate>
+          {% csrf_token %}
+          {% if cl.formset %}
+            <div>{{ cl.formset.management_form }}</div>
+          {% endif %}
+          {% block result_list %}
+            {% result_list cl %}
+          {% endblock %}
+          {% block pagination %}{% pagination cl %}{% endblock %}
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block filters %}{% endblock %}

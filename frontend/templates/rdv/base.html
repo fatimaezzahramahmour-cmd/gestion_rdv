@@ -17,7 +17,7 @@
     <div class="extranet-layout">
       <aside class="extranet-sidebar" id="extranetSidebar">
         <div class="extranet-sidebar-brand">
-          <a href="{% if user_role == 'agent' %}{% url 'agent_dashboard' %}{% elif user_role == 'admin' or request.user.is_staff %}{% url 'admin_dashboard' %}{% else %}{% url 'extranet' %}{% endif %}">
+          <a href="{% if user_role == 'agent' %}{% url 'agent_dashboard' %}{% elif user_role == 'admin' or request.user.is_staff %}/admin/{% else %}{% url 'extranet' %}{% endif %}">
             <img src="{% static 'rdv/images/logo.svg' %}" alt="" class="app-logo" width="36" height="36">
             <div>
               <span class="extranet-brand-name">Centre Dentaire</span>
@@ -39,11 +39,11 @@
               <span class="extranet-nav-icon">☰</span> File d'attente
             </a>
           {% elif user_role == 'admin' or request.user.is_staff %}
-            <a class="extranet-nav-link{% if request.resolver_match.url_name == 'admin_dashboard' %} active{% endif %}" href="{% url 'admin_dashboard' %}">
-              <span class="extranet-nav-icon">▣</span> Statistiques
-            </a>
             <a class="extranet-nav-link" href="/admin/">
-              <span class="extranet-nav-icon">⚙</span> Django Admin
+              <span class="extranet-nav-icon">▣</span> Administration
+            </a>
+            <a class="extranet-nav-link{% if request.resolver_match.url_name == 'agent_file_attente' %} active{% endif %}" href="{% url 'agent_file_attente' %}">
+              <span class="extranet-nav-icon">☰</span> File d'attente
             </a>
           {% elif request.user.is_authenticated %}
             <a class="extranet-nav-link{% if request.resolver_match.url_name == 'extranet' %} active{% endif %}" href="{% url 'extranet' %}">

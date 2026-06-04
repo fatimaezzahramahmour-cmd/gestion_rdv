@@ -1,0 +1,23 @@
+{% load i18n static %}
+<button class="sticky toggle-nav-sidebar" id="toggle-nav-sidebar" type="button" aria-label="Ouvrir le menu">☰</button>
+<nav class="sticky" id="nav-sidebar" aria-label="Menu administration">
+
+  <div class="admin-sidebar-brand extranet-sidebar-brand">
+    <a href="{% url 'centredentaireadmin:index' %}">
+      <img src="{% static 'rdv/images/logo.svg' %}" alt="" class="app-logo" width="36" height="36">
+      <div>
+        <span class="extranet-brand-name">Centre Dentaire</span>
+        <span class="extranet-role-label">Administration</span>
+      </div>
+    </a>
+  </div>
+
+  {% include "admin/includes/admin_sidebar_nav.html" %}
+
+  {% if user.is_authenticated %}
+  <div class="sidebar-footer extranet-sidebar-foot">
+    <div class="extranet-user-name">{{ user.email|default:user.get_username }}</div>
+    <div class="extranet-user-meta">Connecté · {% now "d/m/Y" %}</div>
+  </div>
+  {% endif %}
+</nav>

@@ -660,12 +660,7 @@ body.extranet-app {
   --patient-accent-border: rgba(20, 184, 166, 0.35);
 }
 
-.espace-admin {
-  --patient-accent: #3b82f6;
-  --patient-accent-hover: #2563eb;
-  --patient-accent-soft: rgba(59, 130, 246, 0.12);
-  --patient-accent-border: rgba(59, 130, 246, 0.35);
-}
+/* Admin : même palette verte que patient */
 
 .espace-patient .main-wrap,
 .extranet-panel { border-left: none; }

@@ -1,0 +1,31 @@
+{% load i18n %}
+<nav class="admin-sidebar-nav" aria-label="Menu principal">
+  <a href="{% url 'centredentaireadmin:index' %}"
+     class="admin-quick-link{% if request.resolver_match.url_name == 'index' %} is-active{% endif %}">
+    Accueil
+  </a>
+  <a href="{% url 'centredentaireadmin:rdv_utilisateur_changelist' %}"
+     class="admin-quick-link{% if 'utilisateur' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    Comptes
+  </a>
+  <a href="{% url 'centredentaireadmin:rdv_rendez_vous_changelist' %}"
+     class="admin-quick-link{% if 'rendez_vous' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    File d'attente
+  </a>
+  <a href="{% url 'centredentaireadmin:rdv_service_changelist' %}"
+     class="admin-quick-link{% if 'service' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    Services
+  </a>
+  <a href="{% url 'centredentaireadmin:rdv_creneauhoraire_changelist' %}"
+     class="admin-quick-link{% if 'creneauhoraire' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    Créneaux horaires
+  </a>
+  <a href="{% url 'centredentaireadmin:rdv_horairecabinet_changelist' %}"
+     class="admin-quick-link{% if 'horairecabinet' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    Horaires cabinet
+  </a>
+  <a href="{% url 'centredentaireadmin:rdv_jourfermeture_changelist' %}"
+     class="admin-quick-link{% if 'jourfermeture' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    Jours de fermeture
+  </a>
+</nav>

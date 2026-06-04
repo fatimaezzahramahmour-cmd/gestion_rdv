@@ -133,6 +133,8 @@ class Rendez_vous(models.Model):
 
     class Meta:
         ordering = ['-priority', 'date', 'created_at']
+        verbose_name = 'Rendez-vous'
+        verbose_name_plural = 'Rendez-vous'
 
     def __str__(self):
         return f"{self.titre} ({self.date:%Y-%m-%d %H:%M})"
@@ -152,14 +154,18 @@ class Rendez_vous(models.Model):
 class Utilisateur(models.Model):
     """Profile model linked to Django `User` to store role and display name (Agent/Admin)."""
     ROLE_CHOICES = (
-        ('admin', 'Admin'),
-        ('agent', 'Agent'),
-        ('user', 'User'),
+        ('admin', 'Administrateur'),
+        ('agent', 'Réception'),
+        ('user', 'Patient'),
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     nom = models.CharField(max_length=150, blank=True)
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+
+    class Meta:
+        verbose_name = 'Compte'
+        verbose_name_plural = 'Comptes'
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
@@ -221,7 +227,7 @@ class FileAttente(models.Model):
 
     class Meta:
         verbose_name = 'File d\'attente'
-        verbose_name_plural = 'Files d\'attente'
+        verbose_name_plural = 'File d\'attente'
         ordering = ['-priorite', 'numero_ticket']
 
     def __str__(self):
@@ -248,10 +254,12 @@ from django.dispatch import receiver
 
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Utilisateur.objects.create(user=instance, nom=instance.get_full_name() or instance.username)
-    else:
-        Utilisateur.objects.get_or_create(user=instance)
+    """Profil applicatif — get_or_create pour ne pas doubler avec l'admin (ajout compte)."""
+    nom = (instance.get_full_name() or instance.username or '').strip()
+    Utilisateur.objects.get_or_create(
+        user=instance,
+        defaults={'nom': nom, 'role': 'user'},
+    )
 
 
 @receiver(post_save, sender=Utilisateur)
@@ -375,7 +383,7 @@ class FAQDentaire(models.Model):
 
     class Meta:
         verbose_name = 'FAQ Dentaire'
-        verbose_name_plural = 'FAQs Dentaires'
+        verbose_name_plural = 'FAQ dentaires'
         ordering = ['-priorite', 'question']
 
     def __str__(self):

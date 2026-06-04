@@ -6,16 +6,18 @@ Le rôle applicatif est stocké dans **`rdv_utilisateur.role`** (modèle `Utilis
 
 | Valeur | Libellé | Description |
 |--------|---------|-------------|
-| `admin` | Administrateur | Accès Django Admin, configuration, statistiques |
-| `agent` | Agent / réception | Tableau de bord agent, file d'attente, validation RDV |
-| `user` | Patient | Extranet, réservation, annulation/modification (règles 24 h) |
+| `admin` | Administrateur cabinet | Django Admin : créer agents/patients, services, horaires, fermetures, FAQ. **Pas** de gestion des RDV |
+| `agent` | Agent / réception | Tableau de bord agent, file d'attente, appeler/valider/annuler les RDV |
+| `user` | Patient | Extranet, prise de RDV (inscription publique fermée — compte créé par l'admin) |
 
 En plus, Django fournit des flags sur `User` :
 
-- `is_staff` : accès interface `/admin/` (souvent admin).
+- `is_staff` : accès interface `/admin/` (compte administrateur cabinet).
 - `is_superuser` : tous les droits admin Django.
 
-Un utilisateur avec `is_staff=True` est traité comme **agent** par `_is_agent()` même si `role` n'est pas `agent`.
+L'inscription `/signup/` est **fermée** : seul l'admin crée les comptes agent et patient via **Utilisateurs** dans `/admin/`.
+
+L’admin crée des **Comptes** (menu admin) en choisissant **Réception** ou **Patient**. Les fiches `Patient` / `Compte` (solde) sont automatiques et masquées du menu. La **file d’attente** est en **lecture seule** (en attente / appelés / terminés). Les **FAQ dentaires** sont hors menu admin cabinet.
 
 ## Matrice des permissions
 
@@ -30,7 +32,7 @@ Légende : ✅ autorisé · ❌ refusé · ⚠️ conditionnel
 | Inscription | `/signup/` | ❌ (redirige login) | — | — | — |
 | Extranet patient | `/extranet/` | ❌ | ✅ | ✅* | ✅* |
 | Liste mes RDV | `/mes-rendez-vous/` | ❌ | ✅ (ses RDV) | ✅* | ✅ (tous si admin) |
-| Créer RDV | `/rdv/create/` | ❌ | ✅ | ❌** | ❌** |
+| Créer RDV | `/rdv/create/` | ❌ | ✅ | ❌ | ❌ |
 | Modifier RDV | `/rdv/<pk>/modifier/` | ❌ | ✅*** | ❌ | ❌ |
 | Annuler RDV (patient) | `/rdv/<pk>/annuler/` | ❌ | ✅*** | ❌ | ❌ |
 | File d'attente (vue patient) | `/file-dattente/` | ❌ | ✅ | ✅ | ✅ |
@@ -41,12 +43,13 @@ Légende : ✅ autorisé · ❌ refusé · ⚠️ conditionnel
 | API créneaux | `/rdv/creneaux/` | ❌ | ✅ | ✅ | ✅ |
 | Prochain en file | `/rdv/next/` | ❌ | ✅ (sa file) | ✅ | ✅ (global) |
 | Dashboard stats custom | `/admin/dashboard/` | ❌ | ❌ | ❌ | ✅ (`staff`) |
-| Django Admin | `/admin/` | ❌ | ❌ | ❌ | ✅ (`staff`) |
+| Django Admin | `/admin/` | ❌ | ❌ | ❌ | ✅ (`role=admin`, `is_staff`) |
+| Django Admin — créer/modifier RDV | `/admin/.../rendez_vous/` | ❌ | ❌ | ❌ | ❌ (lecture seule masquée du menu) |
+| Django Admin — créer agent/patient | `/admin/.../utilisateur/add/` | ❌ | ❌ | ❌ | ✅ |
 
-\* Redirigés vers extranet si ce n'est pas un agent sur les URLs agent.  
-\*\* Les agents/admins reçoivent un message d'erreur s'ils tentent de créer un RDV comme un patient.  
+\* Redirigés vers l'admin ou l'espace agent s'ils ouvrent l'extranet patient.  
 \*\*\* Uniquement si `patient_peut_modifier_ou_annuler()` : statut `pending` ou `confirmed`, et **≥ 24 h** avant le RDV.  
-\*\*\*\* Un admin avec `is_staff` peut être considéré agent par `_is_agent()`.
+\*\*\*\* L'admin cabinet consulte des stats sur le tableau de bord ; les RDV sont gérés uniquement par la réception.
 
 ### Données visibles
 

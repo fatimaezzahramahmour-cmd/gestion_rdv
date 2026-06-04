@@ -3,9 +3,10 @@ from zoneinfo import ZoneInfo
 
 from django import forms
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from .models import Rendez_vous, JourFermeture
+from .models import Rendez_vous, JourFermeture, Utilisateur
 
 _TZ_CABINET = ZoneInfo(str(settings.TIME_ZONE))
 
@@ -296,3 +297,68 @@ class RendezVousForm(forms.ModelForm):
         if qs.exists():
             raise ValidationError('Ce créneau n’est plus disponible.')
         return dt
+
+
+class UtilisateurAddForm(forms.ModelForm):
+    """Création agent ou patient par l'admin (inscription publique fermée)."""
+
+    email = forms.EmailField(
+        label='E-mail',
+        help_text='Sert d’identifiant de connexion.',
+    )
+    password = forms.CharField(
+        label='Mot de passe',
+        widget=forms.PasswordInput(render_value=False),
+        min_length=8,
+        help_text='Minimum 8 caractères.',
+    )
+
+    class Meta:
+        model = Utilisateur
+        fields = ('nom', 'role')
+        labels = {
+            'nom': 'Nom affiché',
+            'role': 'Type de compte',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = [
+            ('agent', 'Réception'),
+            ('user', 'Patient'),
+        ]
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(username=email).exists():
+            raise ValidationError('Un compte existe déjà avec cet e-mail.')
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError('Cet e-mail est déjà utilisé.')
+        return email
+
+    def save(self, commit=True):
+        email = self.cleaned_data['email'].strip().lower()
+        nom = (self.cleaned_data.get('nom') or '').strip() or email
+        role = self.cleaned_data['role']
+        user = User(
+            username=email,
+            email=email,
+            first_name=nom[:150],
+            is_staff=False,
+            is_superuser=False,
+        )
+        user.set_password(self.cleaned_data['password'])
+        if commit:
+            user.save()
+            profile, _ = Utilisateur.objects.update_or_create(
+                user=user,
+                defaults={'nom': nom, 'role': role},
+            )
+            self.instance = profile
+        else:
+            self.instance = Utilisateur(user=user, nom=nom, role=role)
+        return self.instance
+
+    def save_m2m(self):
+        """Aucun champ M2M — requis par le flux admin Django."""
+        pass

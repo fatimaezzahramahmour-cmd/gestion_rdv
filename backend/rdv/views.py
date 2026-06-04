@@ -24,18 +24,21 @@ from zoneinfo import ZoneInfo
 from datetime import timedelta
 
 
+def _is_admin(user):
+	profile = getattr(user, 'profile', None)
+	return bool(profile and profile.role == 'admin')
+
+
 def _is_agent(user):
 	profile = getattr(user, 'profile', None)
-	return profile and profile.role == 'agent' or getattr(user, 'is_staff', False)
+	return bool(profile and profile.role == 'agent')
 
 
 def _redirect_non_patient(request):
 	"""Redirige admin/agent hors de l'espace patient."""
-	profile = getattr(request.user, 'profile', None)
-	role = profile.role if profile else 'user'
-	if role == 'admin' or getattr(request.user, 'is_staff', False):
+	if _is_admin(request.user):
 		return redirect('/admin/')
-	if role == 'agent':
+	if _is_agent(request.user):
 		return redirect('agent_dashboard')
 	return None
 
@@ -237,8 +240,8 @@ def login_view(request):
 			login(request, user)
 			profile = getattr(user, 'profile', None)
 			role = profile.role if profile else 'user'
-			if role == 'admin' or getattr(user, 'is_staff', False):
-				return redirect('/admin/')  # Django Admin dashboard
+			if role == 'admin':
+				return redirect('/admin/')
 			if role == 'agent':
 				return redirect('agent_dashboard')
 			return redirect('extranet')
@@ -359,9 +362,12 @@ def rdv_create(request):
 @require_POST
 def rdv_patient_annuler(request, pk):
 	profile = getattr(request.user, 'profile', None)
-	if profile and profile.role in ('agent', 'admin'):
+	if profile and profile.role == 'admin':
+		messages.info(request, 'La gestion des rendez-vous est réservée à la réception.')
+		return redirect('/admin/')
+	if profile and profile.role == 'agent':
 		messages.error(request, 'Utilisez l’espace réception pour gérer les rendez-vous.')
-		return redirect('extranet')
+		return redirect('agent_dashboard')
 	rdv = get_object_or_404(Rendez_vous, pk=pk, utilisateur=request.user)
 	if not patient_peut_modifier_ou_annuler(rdv):
 		messages.error(
@@ -381,9 +387,12 @@ def rdv_patient_modifier(request, pk):
 	from datetime import datetime as dt_module
 
 	profile = getattr(request.user, 'profile', None)
-	if profile and profile.role in ('agent', 'admin'):
+	if profile and profile.role == 'admin':
+		messages.info(request, 'La modification des rendez-vous est réservée aux patients.')
+		return redirect('/admin/')
+	if profile and profile.role == 'agent':
 		messages.error(request, 'Action réservée aux patients.')
-		return redirect('extranet')
+		return redirect('agent_dashboard')
 	rdv = get_object_or_404(Rendez_vous, pk=pk, utilisateur=request.user)
 	if not patient_peut_modifier_ou_annuler(rdv):
 		messages.error(
@@ -503,23 +512,8 @@ def agent_file_attente_view(request):
 
 @staff_member_required
 def admin_dashboard(request):
-	"""Admin dashboard - Statistique.generer_rapport, superviser RDV."""
-	now = timezone.now()
-	next_week = now + timedelta(days=7)
-
-	rapport = Statistique.generer_rapport()
-	total = rapport['total']
-	urgent_count = rapport['urgent']
-	by_status = rapport['by_status']
-	upcoming = Rendez_vous.objects.filter(date__gte=now, date__lte=next_week).order_by('date')[:10]
-
-	context = {
-		'total': total,
-		'by_status': by_status,
-		'urgent_count': urgent_count,
-		'upcoming': upcoming,
-	}
-	return render(request, 'rdv/admin_dashboard.html', context)
+	"""Ancienne vue stats — redirige vers le tableau de bord Django admin."""
+	return redirect('/admin/')
 
 
 def signup_view(request):

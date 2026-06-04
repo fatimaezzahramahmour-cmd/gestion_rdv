@@ -1,263 +1,176 @@
 {% extends "admin/base_site.html" %}
-{% load i18n static %}
+{% load i18n %}
+
+{% block bodyclass %}dashboard{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
 
 {% block content %}
-<div class="dashboard-content">
-    
-    <!-- Welcome Banner -->
-    <div class="welcome-banner">
-        <div>
-            <h2>Tableau de bord administration</h2>
-            <p>Bienvenue, <strong>{{ user.get_username }}</strong> — Cabinet dentaire — Administration</p>
-        </div>
-        <div class="status-badge">
-            <span class="status-dot"></span>
-            Système actif
-        </div>
+<div class="dashboard-content admin-home">
+
+  <header class="admin-home-hero">
+    <div class="admin-home-hero-main">
+      <p class="admin-home-eyebrow">Accueil</p>
+      <h1 class="admin-home-title">Bonjour{% if user.get_short_name %}, {{ user.get_short_name }}{% endif %}</h1>
+      <p class="admin-home-sub">
+        Administration du cabinet · {% now "d/m/Y" %}
+        {% if user.email %}<span class="admin-home-email">{{ user.email }}</span>{% endif %}
+      </p>
     </div>
-
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon patients">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-            </div>
-            <div class="stat-value">{{ stats.total_patients }}</div>
-            <div class="stat-label">Patients</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon today">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-            </div>
-            <div class="stat-value">{{ stats.rdv_aujourdhui }}</div>
-            <div class="stat-label">RDV aujourd'hui</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon pending">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-            </div>
-            <div class="stat-value">{{ stats.rdv_en_attente }}</div>
-            <div class="stat-label">En attente</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon confirmed">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-            </div>
-            <div class="stat-value">{{ stats.rdv_confirmes }}</div>
-            <div class="stat-label">Confirmés</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon done">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10 9 9 9 8 9"/>
-                </svg>
-            </div>
-            <div class="stat-value">{{ stats.rdv_termines }}</div>
-            <div class="stat-label">Terminés</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon cancelled">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-            </div>
-            <div class="stat-value">{{ stats.rdv_annules }}</div>
-            <div class="stat-label">Annulés</div>
-        </div>
+    <div class="admin-home-hero-actions">
+      <a href="{% url 'centredentaireadmin:rdv_utilisateur_add' %}" class="admin-home-cta admin-home-cta--primary">
+        + Nouveau compte
+      </a>
+      <a href="{% url 'centredentaireadmin:rdv_rendez_vous_changelist' %}" class="admin-home-cta admin-home-cta--ghost">
+        File d'attente
+      </a>
     </div>
+  </header>
 
-    <!-- Quick Actions -->
-    <div class="actions-section">
-        <h3>Actions rapides</h3>
-        <div class="actions-grid">
-            <a href="{% url 'admin:rdv_rendez_vous_add' %}" class="action-btn primary">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Nouveau RDV
-            </a>
-            <a href="{% url 'admin:rdv_patient_add' %}" class="action-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                    <circle cx="12" cy="7" r="4"/>
-                </svg>
-                Nouveau Patient
-            </a>
-            <a href="/agent/file-attente/" class="action-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6"/>
-                    <line x1="8" y1="12" x2="21" y2="12"/>
-                    <line x1="8" y1="18" x2="21" y2="18"/>
-                    <line x1="3" y1="6" x2="3.01" y2="6"/>
-                    <line x1="3" y1="12" x2="3.01" y2="12"/>
-                    <line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
-                File d'attente
-            </a>
-            <a href="{% url 'admin:rdv_creneauhoraire_changelist' %}" class="action-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                Créneaux
-            </a>
-            <a href="{% url 'admin:rdv_service_changelist' %}" class="action-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                </svg>
-                Services
-            </a>
-            <a href="{% url 'admin:rdv_faqdentaire_changelist' %}" class="action-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                FAQ
-            </a>
-        </div>
+  <section class="admin-home-stats" aria-label="Indicateurs">
+    <article class="admin-home-stat">
+      <span class="admin-home-stat-value">{{ stats.total_patients }}</span>
+      <span class="admin-home-stat-label">Patients</span>
+    </article>
+    <article class="admin-home-stat">
+      <span class="admin-home-stat-value">{{ stats.rdv_aujourdhui }}</span>
+      <span class="admin-home-stat-label">RDV aujourd'hui</span>
+    </article>
+    <article class="admin-home-stat admin-home-stat--warn">
+      <span class="admin-home-stat-value">{{ stats.rdv_en_attente }}</span>
+      <span class="admin-home-stat-label">En attente</span>
+    </article>
+    <article class="admin-home-stat admin-home-stat--info">
+      <span class="admin-home-stat-value">{{ stats.rdv_confirmes }}</span>
+      <span class="admin-home-stat-label">Appelés</span>
+    </article>
+    <article class="admin-home-stat admin-home-stat--ok">
+      <span class="admin-home-stat-value">{{ stats.rdv_termines }}</span>
+      <span class="admin-home-stat-label">Terminés</span>
+    </article>
+  </section>
+
+  <section class="admin-home-section">
+    <h2 class="admin-home-section-title">Accès rapide</h2>
+    <div class="admin-home-modules">
+      <a href="{% url 'centredentaireadmin:rdv_utilisateur_changelist' %}" class="admin-home-module">
+        <span class="admin-home-module-icon" aria-hidden="true">▣</span>
+        <span class="admin-home-module-title">Comptes</span>
+        <span class="admin-home-module-desc">Agents et patients</span>
+      </a>
+      <a href="{% url 'centredentaireadmin:rdv_rendez_vous_changelist' %}" class="admin-home-module">
+        <span class="admin-home-module-icon" aria-hidden="true">☰</span>
+        <span class="admin-home-module-title">File d'attente</span>
+        <span class="admin-home-module-desc">Consultation des RDV</span>
+      </a>
+      <a href="{% url 'centredentaireadmin:rdv_service_changelist' %}" class="admin-home-module">
+        <span class="admin-home-module-icon" aria-hidden="true">◆</span>
+        <span class="admin-home-module-title">Services</span>
+        <span class="admin-home-module-desc">Soins proposés</span>
+      </a>
+      <a href="{% url 'centredentaireadmin:rdv_creneauhoraire_changelist' %}" class="admin-home-module">
+        <span class="admin-home-module-icon" aria-hidden="true">◷</span>
+        <span class="admin-home-module-title">Créneaux</span>
+        <span class="admin-home-module-desc">Plages horaires</span>
+      </a>
+      <a href="{% url 'centredentaireadmin:rdv_horairecabinet_changelist' %}" class="admin-home-module">
+        <span class="admin-home-module-icon" aria-hidden="true">▤</span>
+        <span class="admin-home-module-title">Horaires cabinet</span>
+        <span class="admin-home-module-desc">Ouverture hebdomadaire</span>
+      </a>
+      <a href="{% url 'centredentaireadmin:rdv_jourfermeture_changelist' %}" class="admin-home-module">
+        <span class="admin-home-module-icon" aria-hidden="true">⊘</span>
+        <span class="admin-home-module-title">Fermetures</span>
+        <span class="admin-home-module-desc">Jours exceptionnels</span>
+      </a>
     </div>
+    <p class="admin-home-note">
+      La réception traite la file dans l’<a href="{% url 'agent_dashboard' %}">espace agent</a>
+      (appeler, confirmer, terminer).
+    </p>
+  </section>
 
-    <!-- RDV du jour -->
-    {% if rdv_aujourdhui %}
-    <div class="table-section">
-        <h3>Rendez-vous du jour</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Heure</th>
-                    <th>Patient</th>
-                    <th>Service</th>
-                    <th>Statut</th>
-                    <th>Priorité</th>
-                </tr>
-            </thead>
+  <section class="admin-home-section">
+    <h2 class="admin-home-section-title">Aperçu de la file</h2>
+    <div class="admin-home-file-grid">
+
+      <article class="admin-home-file-card">
+        <header class="admin-home-file-card-head">
+          <h3>En attente</h3>
+          <a href="{% url 'centredentaireadmin:rdv_rendez_vous_changelist' %}?status__exact=pending">Tout voir</a>
+        </header>
+        {% if rdv_en_attente %}
+        <div class="admin-home-file-table-wrap">
+          <table class="admin-home-table">
+            <thead><tr><th>Heure</th><th>Patient</th><th>Priorité</th></tr></thead>
             <tbody>
-                {% for rdv in rdv_aujourdhui %}
-                <tr>
-                    <td>{{ rdv.date|date:"H:i" }}</td>
-                    <td>{{ rdv.utilisateur.get_full_name|default:rdv.utilisateur.username }}</td>
-                    <td>{{ rdv.service.nom|default:"—" }}</td>
-                    <td>
-                        {% if rdv.status == 'pending' %}
-                            <span class="badge badge-pending">En attente</span>
-                        {% elif rdv.status == 'confirmed' %}
-                            <span class="badge badge-confirmed">Confirmé</span>
-                        {% elif rdv.status == 'done' %}
-                            <span class="badge badge-done">Terminé</span>
-                        {% elif rdv.status == 'cancelled' %}
-                            <span class="badge badge-cancelled">Annulé</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if rdv.priority == 'urgent' %}
-                            <span class="badge badge-priority-urgent">Urgent</span>
-                        {% elif rdv.priority == 'normal' %}
-                            <span class="badge badge-priority-normal">Normal</span>
-                        {% elif rdv.priority == 'control' %}
-                            <span class="badge badge-priority-control">Contrôle</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
+              {% for rdv in rdv_en_attente|slice:":6" %}
+              <tr>
+                <td>{{ rdv.date|date:"d/m H:i" }}</td>
+                <td>{{ rdv.utilisateur.get_full_name|default:rdv.utilisateur.username }}</td>
+                <td>{% if rdv.priority == 'urgent' %}<span class="badge badge-urgent">Urgent</span>{% else %}<span class="badge badge-normal">Normal</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
             </tbody>
-        </table>
-    </div>
-    {% endif %}
+          </table>
+        </div>
+        {% else %}
+        <p class="admin-home-empty">Aucun patient en attente.</p>
+        {% endif %}
+      </article>
 
-    <!-- File d'attente -->
-    {% if file_attente %}
-    <div class="table-section">
-        <h3>File d'attente en direct</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Ticket</th>
-                    <th>Patient</th>
-                    <th>Priorité</th>
-                    <th>Heure</th>
-                </tr>
-            </thead>
+      <article class="admin-home-file-card">
+        <header class="admin-home-file-card-head">
+          <h3>Appelés</h3>
+          <a href="{% url 'centredentaireadmin:rdv_rendez_vous_changelist' %}?status__exact=confirmed">Tout voir</a>
+        </header>
+        {% if rdv_appeles %}
+        <div class="admin-home-file-table-wrap">
+          <table class="admin-home-table">
+            <thead><tr><th>Heure</th><th>Patient</th><th>Service</th></tr></thead>
             <tbody>
-                {% for item in file_attente %}
-                <tr>
-                    <td>#{{ item.numero_ticket }}</td>
-                    <td>{{ item.rendez_vous.utilisateur.get_full_name|default:item.rendez_vous.utilisateur.username }}</td>
-                    <td>
-                        {% if item.priorite == 'urgent' %}
-                            <span class="badge badge-priority-urgent">Urgent</span>
-                        {% else %}
-                            <span class="badge badge-priority-normal">Normal</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ item.date_creation|date:"H:i" }}</td>
-                </tr>
-                {% endfor %}
+              {% for rdv in rdv_appeles|slice:":6" %}
+              <tr>
+                <td>{{ rdv.date|date:"d/m H:i" }}</td>
+                <td>{{ rdv.utilisateur.get_full_name|default:rdv.utilisateur.username }}</td>
+                <td>{{ rdv.service.nom|default:"—" }}</td>
+              </tr>
+              {% endfor %}
             </tbody>
-        </table>
-    </div>
-    {% endif %}
+          </table>
+        </div>
+        {% else %}
+        <p class="admin-home-empty">Aucun patient appelé.</p>
+        {% endif %}
+      </article>
 
-    <!-- Recent Activity -->
-    {% if rdv_recents %}
-    <div class="table-section">
-        <h3>Activité récente</h3>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Patient</th>
-                    <th>Action</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
+      <article class="admin-home-file-card">
+        <header class="admin-home-file-card-head">
+          <h3>Terminés</h3>
+          <a href="{% url 'centredentaireadmin:rdv_rendez_vous_changelist' %}?status__exact=done">Tout voir</a>
+        </header>
+        {% if rdv_termines %}
+        <div class="admin-home-file-table-wrap">
+          <table class="admin-home-table">
+            <thead><tr><th>Heure</th><th>Patient</th><th>Service</th></tr></thead>
             <tbody>
-                {% for rdv in rdv_recents %}
-                <tr>
-                    <td>{{ rdv.utilisateur.get_full_name|default:rdv.utilisateur.username }}</td>
-                    <td>
-                        {% if rdv.status == 'done' %}
-                            <span style="color: var(--accent-green); font-weight:500;">Rendez-vous terminé</span>
-                        {% elif rdv.status == 'cancelled' %}
-                            <span style="color: var(--danger); font-weight:500;">Rendez-vous annulé</span>
-                        {% else %}
-                            <span style="color: var(--info); font-weight:500;">Nouveau rendez-vous</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ rdv.created_at|date:"d/m/Y H:i" }}</td>
-                </tr>
-                {% endfor %}
+              {% for rdv in rdv_termines|slice:":6" %}
+              <tr>
+                <td>{{ rdv.date|date:"d/m H:i" }}</td>
+                <td>{{ rdv.utilisateur.get_full_name|default:rdv.utilisateur.username }}</td>
+                <td>{{ rdv.service.nom|default:"—" }}</td>
+              </tr>
+              {% endfor %}
             </tbody>
-        </table>
+          </table>
+        </div>
+        {% else %}
+        <p class="admin-home-empty">Aucun RDV terminé récent.</p>
+        {% endif %}
+      </article>
+
     </div>
-    {% endif %}
+  </section>
 
 </div>
 {% endblock %}

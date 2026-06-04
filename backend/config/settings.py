@@ -68,7 +68,7 @@ if _extra:
     ALLOWED_HOSTS.extend(h.strip() for h in _extra.split(',') if h.strip())
 
 # Accès local (évite CSRF invalid si on alterne localhost / Tailscale)
-for _local in ('127.0.0.1', 'localhost'):
+for _local in ('127.0.0.1', 'localhost', 'testserver'):
     if _local not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_local)
 
@@ -237,7 +237,7 @@ CORS_ALLOW_CREDENTIALS = True
 # 11. INTERNATIONALISATION
 # ============================================
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr-fr'
 TIME_ZONE = 'Africa/Casablanca'
 USE_I18N = True
 USE_TZ = True
