@@ -1,8 +1,7 @@
 {
   "python.defaultInterpreterPath": "C:\\Users\\LENOVO\\Downloads\\gestion_rdv\\venv\\Scripts\\python.exe",
   "python.analysis.extraPaths": [
-    "gestion_rdv",
-    "C:\\Users\\LENOVO\\Downloads\\gestion_rdv\\venv\\Lib\\site-packages"
+    "backend"
   ],
   "python.analysis.indexing": true
 }

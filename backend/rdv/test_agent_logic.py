@@ -221,6 +221,16 @@ class AgentWorkflowTests(TestCase):
 
     def test_agent_button_labels_harmonized(self):
         """Même action backend = même libellé ; pas de doublon appeler-prochain sur le dashboard."""
+        today = cabinet_local_today()
+        start_day, _ = cabinet_day_datetime_bounds(today)
+        Rendez_vous.objects.create(
+            titre='RDV déjà appelé',
+            description='Test libellés boutons',
+            date=start_day + timedelta(hours=9),
+            utilisateur=self.patient,
+            status='confirmed',
+            priority='normal',
+        )
         self._login_agent()
         dashboard = self.client.get('/agent/dashboard/')
         self.assertEqual(dashboard.status_code, 200)

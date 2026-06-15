@@ -28,4 +28,8 @@
      class="admin-quick-link{% if 'jourfermeture' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
     Jours de fermeture
   </a>
+  <a href="{% url 'centredentaireadmin:rdv_faqdentaire_changelist' %}"
+     class="admin-quick-link{% if 'faqdentaire' in request.resolver_match.url_name|default:'' %} is-active{% endif %}">
+    FAQ dentaire
+  </a>
 </nav>

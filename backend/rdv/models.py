@@ -141,9 +141,17 @@ class Rendez_vous(models.Model):
 
     @property
     def queue_position(self):
-        """Compute 1-based position in the pending queue (by priority desc then date asc)."""
-        qs = Rendez_vous.objects.filter(status='pending')
-        # map priority to numeric for ordering: urgent first
+        """Position 1-based dans la file pending du jour du RDV (urgent d'abord)."""
+        if self.status != 'pending':
+            return None
+        from .forms import rdv_datetime_cabinet, cabinet_day_datetime_bounds
+        day = rdv_datetime_cabinet(self).date()
+        start, end = cabinet_day_datetime_bounds(day)
+        qs = Rendez_vous.objects.filter(
+            status='pending',
+            date__gte=start,
+            date__lt=end,
+        )
         ordered = sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
         try:
             return ordered.index(self) + 1

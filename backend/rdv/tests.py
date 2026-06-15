@@ -9,6 +9,7 @@ from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
 
 from .models import Patient, Compte, Utilisateur, Rendez_vous, ensure_patient_for_user
+from .forms import cabinet_local_today, cabinet_day_datetime_bounds
 
 
 class ClosedExtranetAuthTests(TestCase):
@@ -132,11 +133,19 @@ class PatientDataIsolationTests(TestCase):
         )
         ensure_patient_for_user(self.patient1, nom='Patient Un')
         ensure_patient_for_user(self.patient2, nom='Patient Deux')
+        start_day, _ = cabinet_day_datetime_bounds(cabinet_local_today())
         self.rdv_p1 = Rendez_vous.objects.create(
             titre='RDV secret patient1',
             description='Consultation',
-            date=timezone.now() + timedelta(days=5),
+            date=start_day + timedelta(hours=10),
             utilisateur=self.patient1,
+            status='pending',
+        )
+        self.rdv_p2 = Rendez_vous.objects.create(
+            titre='RDV secret patient2',
+            description='Consultation',
+            date=start_day + timedelta(hours=11),
+            utilisateur=self.patient2,
             status='pending',
         )
 
@@ -167,19 +176,94 @@ class PatientDataIsolationTests(TestCase):
         self.rdv_p1.refresh_from_db()
         self.assertEqual(self.rdv_p1.status, 'pending')
 
-    def test_file_attente_shows_only_own_position(self):
-        self._login(self.patient1)
-        response = self.client.get('/file-dattente/')
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Vous')
-        self.assertNotContains(response, 'Patient Deux')
-
-        self.client.logout()
+    def test_file_attente_shows_day_queue_anonymized(self):
         self._login(self.patient2)
         response = self.client.get('/file-dattente/')
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'RDV secret patient1')
+        self.assertContains(response, 'Patient n°1')
+        self.assertContains(response, 'Patient n°2')
+        self.assertContains(response, 'Vous')
         self.assertNotContains(response, 'Patient Un')
+        self.assertNotContains(response, 'Patient Deux')
+        self.assertNotContains(response, 'RDV secret patient1')
+
+        self.client.logout()
+        self._login(self.patient1)
+        response = self.client.get('/file-dattente/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Patient n°1')
+        self.assertContains(response, 'Vous')
+        self.assertContains(response, 'Patient n°2')
+        self.assertNotContains(response, 'RDV secret patient2')
+        self.assertNotContains(response, 'Patient Deux')
+
+    def test_file_attente_future_rdv_shows_queue_before_day(self):
+        """Dès la réservation, la file du jour du RDV est visible (pas seulement le jour J)."""
+        start_day, _ = cabinet_day_datetime_bounds(cabinet_local_today())
+        future_day = start_day + timedelta(days=7)
+        self.rdv_p1.status = 'cancelled'
+        self.rdv_p1.save()
+        self.rdv_p2.status = 'cancelled'
+        self.rdv_p2.save()
+        Rendez_vous.objects.create(
+            titre='RDV futur p1',
+            description='Consultation',
+            date=future_day + timedelta(hours=9),
+            utilisateur=self.patient1,
+            status='pending',
+        )
+        Rendez_vous.objects.create(
+            titre='RDV futur p2',
+            description='Consultation',
+            date=future_day + timedelta(hours=10),
+            utilisateur=self.patient2,
+            status='pending',
+        )
+        self._login(self.patient2)
+        response = self.client.get('/file-dattente/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['show_queue'])
+        self.assertFalse(response.context['queue_day_is_today'])
+        self.assertContains(response, 'Patient n°1')
+        self.assertContains(response, 'Patient n°2')
+        self.assertContains(response, '1 patient devant vous')
+        self.assertContains(response, 'prévisionnelle')
+
+    def test_file_attente_three_patients_position(self):
+        """Patient 3 voit les patients 1 et 2 devant lui dans la file du jour."""
+        patient3 = User.objects.create_user(
+            username='patient3',
+            email='patient3@test.com',
+            password='password123',
+        )
+        ensure_patient_for_user(patient3, nom='Patient Trois')
+        start_day, _ = cabinet_day_datetime_bounds(cabinet_local_today())
+        Rendez_vous.objects.create(
+            titre='RDV patient3',
+            description='Consultation',
+            date=start_day + timedelta(hours=12),
+            utilisateur=patient3,
+            status='pending',
+        )
+        self._login(patient3)
+        response = self.client.get('/file-dattente/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Patient n°1')
+        self.assertContains(response, 'Patient n°2')
+        self.assertContains(response, 'Patient n°3')
+        self.assertContains(response, 'Vous')
+        self.assertContains(response, '2 patients devant vous')
+
+    def test_file_attente_called_patient_hidden_from_pending(self):
+        """Une fois appelé, le patient n'apparaît plus dans la file pending des autres."""
+        self.rdv_p1.status = 'confirmed'
+        self.rdv_p1.save()
+        self._login(self.patient2)
+        response = self.client.get('/file-dattente/')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Patient n°2')
+        self.assertContains(response, 'Patient n°1')
+        self.assertContains(response, 'Vous')
 
     def test_rdv_create_assigns_current_user(self):
         self._login(self.patient2)

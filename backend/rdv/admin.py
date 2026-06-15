@@ -35,12 +35,14 @@ _ADMIN_MODEL_ORDER = [
     "creneauhoraire",
     "horairecabinet",
     "jourfermeture",
+    "faqdentaire",
 ]
 
 # Libellés menu (utilisateur → Comptes, rendez_vous → File d'attente)
 _ADMIN_MENU_LABELS = {
     "utilisateur": "Comptes",
     "rendez_vous": "File d'attente",
+    "faqdentaire": "FAQ dentaire",
 }
 
 # Masqués du menu
@@ -48,7 +50,6 @@ _ADMIN_MENU_HIDDEN = frozenset({
     "patient",
     "fileattente",
     "compte",
-    "faqdentaire",
     "conversation",
     "messagechatbot",
     "actionchatbot",
@@ -686,6 +687,5 @@ admin_site.register(HoraireCabinet, HoraireCabinetAdmin)
 admin_site.register(JourFermeture,  JourFermetureAdmin)
 admin_site.register(Conversation,   ConversationAdmin)
 admin_site.register(MessageChatbot, MessageChatbotAdmin)
-# FAQ / chatbot : hors menu admin cabinet (données gérées autrement si besoin)
 admin_site.register(FAQDentaire,    FAQDentaireAdmin)
 admin_site.register(ActionChatbot,  ActionChatbotAdmin)

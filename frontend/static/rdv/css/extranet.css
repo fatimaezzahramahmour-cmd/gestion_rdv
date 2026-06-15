@@ -32,6 +32,24 @@ body.extranet-app {
   --patient-accent-border: rgba(20, 184, 166, 0.35);
 }
 
+/* Réception : pleine largeur sous la topbar (sidebar inchangée) */
+.espace-receptionniste .extranet-content {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.espace-receptionniste .extranet-panel {
+  flex: 1;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 100%;
+}
+
 /* Admin : même thème vert que l'espace patient (pas de surcharge bleue) */
 
 .extranet-layout { display: flex; min-height: 100vh; }

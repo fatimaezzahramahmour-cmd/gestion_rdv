@@ -24,26 +24,30 @@
     };
 
     function init() {
-        state.sessionId = getSessionId();
+        localStorage.removeItem('chatbot_session_id');
         createWidgetDOM();
-        loadHistory();
-        setTimeout(() => {
-            if (state.messages.length === 0) {
-                addBotMessage(
-                    "Bonjour ! Je suis l'assistant virtuel du Centre Dentaire. Comment puis-je vous aider ?",
-                    ['Voir les services', 'Prendre un RDV', 'Horaires', 'Urgence']
-                );
-            }
-        }, CONFIG.greetingDelay);
     }
 
-    function getSessionId() {
-        let sid = localStorage.getItem('chatbot_session_id');
-        if (!sid) {
-            sid = 'cb_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-            localStorage.setItem('chatbot_session_id', sid);
+    function createNewSessionId() {
+        return 'cb_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+
+    function resetConversation() {
+        state.messages = [];
+        state.conversationId = null;
+        state.sessionId = createNewSessionId();
+        const container = document.getElementById('cb-messages');
+        if (container) container.innerHTML = '';
+        clearSuggestions();
+    }
+
+    function showGreetingIfEmpty() {
+        if (state.messages.length === 0) {
+            addBotMessage(
+                "Bonjour ! Je suis l'assistant virtuel du Centre Dentaire. Comment puis-je vous aider ?",
+                ['Voir les services', 'Prendre un RDV', 'Horaires', 'Urgence']
+            );
         }
-        return sid;
     }
 
     function createWidgetDOM() {
@@ -81,23 +85,6 @@
                     position: relative;
                     overflow: hidden;
                     border: 3px solid white;
-                }
-                .cb-bubble::after {
-                    content: '';
-                    position: absolute;
-                    bottom: 2px;
-                    right: 2px;
-                    width: 16px;
-                    height: 16px;
-                    background: #4ade80;
-                    border-radius: 50%;
-                    border: 3px solid white;
-                    animation: cb-pulse 2s infinite;
-                    z-index: 10;
-                }
-                @keyframes cb-pulse {
-                    0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
-                    50% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
                 }
                 .cb-bubble:hover { 
                     transform: scale(1.15) translateY(-3px);
@@ -373,12 +360,18 @@
     function toggleChat() {
         state.isOpen = !state.isOpen;
         const window = document.getElementById('cb-window');
+        const bubble = document.getElementById('cb-bubble');
         if (state.isOpen) {
+            resetConversation();
             window.classList.add('open');
+            if (bubble) bubble.style.display = 'none';
             document.getElementById('cb-input').focus();
+            showGreetingIfEmpty();
             scrollToBottom();
         } else {
             window.classList.remove('open');
+            if (bubble) bubble.style.display = 'flex';
+            resetConversation();
         }
     }
 
@@ -493,6 +486,9 @@
         const input = document.getElementById('cb-input');
         const text = input.value.trim();
         if (!text || state.isTyping) return;
+        if (!state.sessionId) {
+            state.sessionId = createNewSessionId();
+        }
 
         input.value = '';
         input.style.height = 'auto';
@@ -525,22 +521,6 @@
         } catch (error) {
             hideTyping();
             addBotMessage("Probleme de connexion. Reessayez.", ['Reessayer', 'Contacter le cabinet']);
-        }
-    }
-
-    async function loadHistory() {
-        try {
-            const response = await fetch(CONFIG.apiBaseUrl + 'history/?session_id=' + state.sessionId);
-            const data = await response.json();
-            if (data.success && data.messages.length > 0) {
-                document.getElementById('cb-messages').innerHTML = '';
-                data.messages.forEach(msg => {
-                    if (msg.role === 'user') addUserMessage(msg.contenu);
-                    else if (msg.role === 'assistant') addBotMessage(msg.contenu);
-                });
-            }
-        } catch (error) {
-            console.log('Pas d historique');
         }
     }
 

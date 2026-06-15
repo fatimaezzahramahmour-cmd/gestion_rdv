@@ -18,6 +18,7 @@ from .forms import (
     agent_message_si_passage_indisponible,
     cabinet_local_today,
     cabinet_day_datetime_bounds,
+    rdv_datetime_cabinet,
 )
 from .models import Rendez_vous, FileAttente
 from django.contrib.admin.views.decorators import staff_member_required
@@ -59,6 +60,12 @@ def _redirect_non_agent(request):
 	return redirect('extranet')
 
 
+def _pending_queue_for_day(day):
+	"""RDV pending du jour `day`, triés (urgent d'abord, puis date, created_at)."""
+	qs = _pending_for_day(day)
+	return sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
+
+
 def _queue_ordered():
 	"""File d'attente : tous les RDV pending triés (urgent d'abord, puis date, created_at)."""
 	qs = Rendez_vous.objects.filter(status='pending')
@@ -89,6 +96,96 @@ def _confirmed_ordered():
 	"""Patients appelés (confirmed), même ordre de priorité."""
 	qs = Rendez_vous.objects.filter(status='confirmed')
 	return sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
+
+
+def _confirmed_for_day(day):
+	"""Patients appelés (confirmed) dont le RDV tombe le jour `day`."""
+	start_day, end_day = cabinet_day_datetime_bounds(day)
+	qs = Rendez_vous.objects.filter(
+		status='confirmed',
+		date__gte=start_day,
+		date__lt=end_day,
+	)
+	return sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
+
+
+def _user_has_rdv_on_day(user, day):
+	"""True si le patient a un RDV pending ou confirmed ce jour-là."""
+	start_day, end_day = cabinet_day_datetime_bounds(day)
+	return Rendez_vous.objects.filter(
+		utilisateur=user,
+		status__in=('pending', 'confirmed'),
+		date__gte=start_day,
+		date__lt=end_day,
+	).exists()
+
+
+def _patient_queue_day(user):
+	"""
+	Jour de file à afficher pour le patient :
+	prochain RDV pending/confirmed (aujourd'hui ou futur), dès la réservation.
+	"""
+	today = cabinet_local_today()
+	start_today, end_today = cabinet_day_datetime_bounds(today)
+
+	if Rendez_vous.objects.filter(
+		utilisateur=user,
+		status='confirmed',
+		date__gte=start_today,
+		date__lt=end_today,
+	).exists():
+		return today
+
+	next_rdv = Rendez_vous.objects.filter(
+		utilisateur=user,
+		status__in=('pending', 'confirmed'),
+		date__gte=start_today,
+	).order_by('date').first()
+	if next_rdv:
+		return rdv_datetime_cabinet(next_rdv).date()
+	return None
+
+
+def _patient_queue_entries(user, queue_day):
+	"""File du jour pour le patient : tous les pending anonymisés + statut appelé."""
+	start_day, end_day = cabinet_day_datetime_bounds(queue_day)
+	queue_entries = []
+	patients_ahead = 0
+	user_position = None
+
+	confirmed_rdv = Rendez_vous.objects.filter(
+		utilisateur=user,
+		status='confirmed',
+		date__gte=start_day,
+		date__lt=end_day,
+	).order_by('date').first()
+	if confirmed_rdv:
+		queue_entries.append({
+			'rdv': confirmed_rdv,
+			'position': None,
+			'label': 'Vous êtes appelé(e)',
+			'is_me': True,
+			'is_called': True,
+		})
+
+	for i, rdv in enumerate(_pending_queue_for_day(queue_day), 1):
+		is_me = rdv.utilisateur_id == user.id
+		if is_me:
+			user_position = i
+			patients_ahead = i - 1
+		queue_entries.append({
+			'rdv': rdv,
+			'position': i,
+			'label': 'Vous' if is_me else f'Patient n°{i}',
+			'is_me': is_me,
+			'is_called': False,
+		})
+
+	return {
+		'queue_entries': queue_entries,
+		'patients_ahead': patients_ahead,
+		'user_position': user_position,
+	}
 
 
 def _agent_redirect_after_action(request, default='agent_dashboard'):
@@ -516,38 +613,33 @@ def rdv_next(request):
 
 @login_required
 def file_attente_view(request):
-	"""File d'attente patient : uniquement la position du patient connecté."""
+	"""File d'attente patient : file du jour du RDV (dès la réservation)."""
 	redirect_resp = _redirect_non_patient(request)
 	if redirect_resp:
 		return redirect_resp
 
-	queue = _queue_ordered()
-	queue_entries = []
+	today = cabinet_local_today()
+	queue_day = _patient_queue_day(request.user)
 
-	confirmed_rdv = Rendez_vous.objects.filter(
-		utilisateur=request.user,
-		status='confirmed',
-	).order_by('date').first()
-	if confirmed_rdv:
-		queue_entries.append({
-			'rdv': confirmed_rdv,
-			'position': None,
-			'label': 'Vous êtes appelé(e)',
-			'is_me': True,
-			'is_called': True,
+	if not queue_day:
+		return render(request, 'rdv/file_attente.html', {
+			'queue_entries': [],
+			'queue_day': today,
+			'show_queue': False,
+			'queue_day_is_today': True,
+			'patients_ahead': 0,
+			'user_position': None,
 		})
 
-	for i, rdv in enumerate(queue, 1):
-		if rdv.utilisateur_id != request.user.id:
-			continue
-		queue_entries.append({
-			'rdv': rdv,
-			'position': i,
-			'label': 'Vous',
-			'is_me': True,
-			'is_called': False,
-		})
-	return render(request, 'rdv/file_attente.html', {'queue_entries': queue_entries})
+	data = _patient_queue_entries(request.user, queue_day)
+	return render(request, 'rdv/file_attente.html', {
+		'queue_entries': data['queue_entries'],
+		'queue_day': queue_day,
+		'show_queue': True,
+		'queue_day_is_today': queue_day == today,
+		'patients_ahead': data['patients_ahead'],
+		'user_position': data['user_position'],
+	})
 
 
 @login_required
@@ -556,8 +648,9 @@ def agent_file_attente_view(request):
 	redirect_resp = _redirect_non_agent(request)
 	if redirect_resp:
 		return redirect_resp
+	queue_day = cabinet_local_today()
 	pending_entries = []
-	for i, rdv in enumerate(_queue_ordered(), 1):
+	for i, rdv in enumerate(_pending_queue_for_day(queue_day), 1):
 		nom = _patient_display_name(rdv.utilisateur)
 		pending_entries.append({
 			'rdv': rdv,
@@ -567,7 +660,7 @@ def agent_file_attente_view(request):
 			'msg_appeler': agent_message_si_appeler_indisponible(rdv),
 		})
 	called_entries = []
-	for rdv in _confirmed_ordered():
+	for rdv in _confirmed_for_day(queue_day):
 		nom = _patient_display_name(rdv.utilisateur)
 		called_entries.append({
 			'rdv': rdv,

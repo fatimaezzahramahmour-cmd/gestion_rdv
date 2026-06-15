@@ -7,7 +7,7 @@ from difflib import SequenceMatcher
 
 from django.utils import timezone
 
-from .forms import get_creneaux_disponibles
+from .forms import get_creneaux_disponibles, cabinet_local_today, cabinet_day_datetime_bounds, rdv_datetime_cabinet
 from .models import Conversation, FAQDentaire, Rendez_vous, Service
 
 logger = logging.getLogger('rdv.chatbot')
@@ -570,22 +570,44 @@ class ChatbotEngine:
     def _handle_file_attente(self, texte, utilisateur):
         reponse = "File d'attente\n\n"
         if utilisateur and utilisateur.is_authenticated:
+            from .views import _patient_queue_day, _pending_queue_for_day
+            queue_day = _patient_queue_day(utilisateur)
+            if not queue_day:
+                reponse += "Vous n'avez pas de rendez-vous en attente.\n\n"
+                reponse += LIEN_FILE
+                return {
+                    'reponse': reponse,
+                    'suggestions': ['Prendre un RDV', 'Mes RDV'],
+                    'confiance': 0.85,
+                }
+            start_day, end_day = cabinet_day_datetime_bounds(queue_day)
             rdv_called = Rendez_vous.objects.filter(
-                utilisateur=utilisateur, status='confirmed',
+                utilisateur=utilisateur,
+                status='confirmed',
+                date__gte=start_day,
+                date__lt=end_day,
             ).order_by('date').first()
             if rdv_called:
                 reponse += (
                     "Vous etes appele(e) ! Presentez-vous au cabinet.\n\n"
                 )
             rdv_user = Rendez_vous.objects.filter(
-                utilisateur=utilisateur, status='pending',
+                utilisateur=utilisateur,
+                status='pending',
+                date__gte=start_day,
+                date__lt=end_day,
             ).order_by('date').first()
             if rdv_user:
                 position = self._calculer_position(rdv_user)
+                ahead = position - 1 if position else 0
                 if position:
-                    reponse += f"Votre position dans la file : #{position}\n\n"
+                    reponse += f"File du {queue_day:%d/%m/%Y}\n"
+                    reponse += f"Votre position : #{position}\n"
+                    if ahead:
+                        reponse += f"Patients devant vous : {ahead}\n"
+                    reponse += "\n"
             elif not rdv_called:
-                reponse += "Vous n'avez pas de rendez-vous en attente.\n\n"
+                reponse += f"File du {queue_day:%d/%m/%Y} — rendez-vous prevu ce jour.\n\n"
             reponse += LIEN_FILE
         else:
             reponse += (
@@ -657,7 +679,9 @@ class ChatbotEngine:
         return sorted(qs, key=lambda r: (0 if r.priority == 'urgent' else 1, r.date, r.created_at))
 
     def _calculer_position(self, rdv):
-        for i, item in enumerate(self._queue_ordered(), 1):
+        from .views import _pending_queue_for_day
+        day = rdv_datetime_cabinet(rdv).date()
+        for i, item in enumerate(_pending_queue_for_day(day), 1):
             if item.pk == rdv.pk:
                 return i
         return None

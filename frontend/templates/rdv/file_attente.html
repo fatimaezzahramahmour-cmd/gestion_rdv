@@ -9,18 +9,42 @@
 .page-file-attente .rdv-item.border-success { border-left: 3px solid #15803d; background: linear-gradient(90deg, rgba(21,128,61,.06) 0%, transparent 100%); }
 .page-file-attente .rdv-item.border-called { border-left: 4px solid #0284c7; background: linear-gradient(90deg, rgba(2,132,199,.08) 0%, transparent 100%); }
 .page-file-attente .rdv-item { padding: 1.25rem 1.5rem; }
+.page-file-attente .queue-summary { border-radius: 14px; padding: 1rem 1.25rem; background: #f0fdf4; border: 1px solid #bbf7d0; margin-bottom: 1.25rem; }
+.page-file-attente .queue-summary.called { background: #eff6ff; border-color: #bae6fd; }
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
   <div>
     <h1 class="page-title">File d'attente</h1>
-    <p class="text-muted small mb-0 mt-1">Suivez votre position ou votre statut d'appel au cabinet.</p>
+    <p class="text-muted small mb-0 mt-1">
+      {% if queue_day_is_today %}
+      File du {{ queue_day|date:"d/m/Y" }} — patients devant vous (anonymisés). Mise à jour automatique.
+      {% else %}
+      File prévisionnelle du {{ queue_day|date:"d/m/Y" }} — votre rendez-vous ce jour-là. Dès la réservation, vous voyez votre position.
+      {% endif %}
+    </p>
   </div>
   <a class="btn btn-outline-secondary btn-sm" href="{% url 'rdv_list' %}">← Mes rendez-vous</a>
 </div>
 
-{% if queue_entries %}
+{% if show_queue %}
+  {% if user_position %}
+  <div class="queue-summary">
+    <strong>Votre position : n°{{ user_position }}</strong>
+    {% if patients_ahead %}
+      <span class="text-muted"> — {{ patients_ahead }} patient{{ patients_ahead|pluralize }} devant vous</span>
+    {% else %}
+      <span class="text-muted"> — vous êtes le prochain</span>
+    {% endif %}
+  </div>
+  {% elif queue_entries %}
+  <div class="queue-summary called">
+    <strong>Vous avez été appelé(e)</strong>
+    <span class="text-muted"> — présentez-vous à l'accueil</span>
+  </div>
+  {% endif %}
+
   <div class="rdv-list">
     {% for entry in queue_entries %}
       <div class="rdv-item card-custom p-4 {% if entry.is_called %}border-called border-2{% elif entry.is_me %}border-success border-2{% endif %}">
@@ -29,22 +53,31 @@
             {% if entry.is_called %}
               <h5 class="rdv-item-title mb-1">{{ entry.label }}</h5>
               <p class="text-info mb-1 small fw-semibold">Présentez-vous au cabinet — un agent vous recevra.</p>
-            {% else %}
+            {% elif entry.is_me %}
               <h5 class="rdv-item-title mb-1">Patient n°{{ entry.position }} — {{ entry.label }}</h5>
+            {% else %}
+              <h5 class="rdv-item-title mb-1">{{ entry.label }}</h5>
+              <p class="text-muted mb-1 small">En attente devant vous</p>
             {% endif %}
+            {% if entry.is_me or entry.is_called %}
             <span class="rdv-item-date text-muted">{{ entry.rdv.date }}</span>
             {% if entry.rdv.titre %}<span class="text-muted"> — {{ entry.rdv.titre }}</span>{% endif %}
+            {% else %}
+            <span class="rdv-item-date text-muted">Créneau {{ entry.rdv.date|date:"H:i" }}</span>
+            {% endif %}
           </div>
           <div class="d-flex gap-1 flex-wrap align-items-center">
             {% if entry.is_called %}
               <span class="badge bg-info text-dark">Appelé(e)</span>
             {% elif entry.is_me %}
               <span class="badge bg-success">C'est vous</span>
+            {% else %}
+              <span class="badge bg-secondary">En file</span>
             {% endif %}
             <span class="badge badge-custom badge-{% if entry.rdv.priority == 'urgent' %}urgent{% elif entry.rdv.priority == 'control' %}control{% else %}normal{% endif %}">{{ entry.rdv.get_priority_display }}</span>
           </div>
         </div>
-        {% if entry.rdv.service %}
+        {% if entry.is_me and entry.rdv.service %}
           <p class="rdv-item-meta mb-0 mt-2"><strong>Acte :</strong> {{ entry.rdv.service.nom }}</p>
         {% endif %}
       </div>
@@ -53,12 +86,17 @@
 {% else %}
   <div class="empty-state card-custom text-center py-5 px-4">
     <div class="mb-3" style="font-size: 3rem; color: #15803d; opacity: 0.75;">⏱</div>
-    <h3 class="h5 text-dark mb-2">Aucun rendez-vous en attente</h3>
-    <p class="text-muted small mb-4">La file d'attente est vide pour le moment. Prenez un rendez-vous pour apparaître dans la file et suivre votre position.</p>
+    <h3 class="h5 text-dark mb-2">Aucun rendez-vous en file d'attente</h3>
+    <p class="text-muted small mb-4">Prenez un rendez-vous pour voir tout de suite la file du jour choisi et votre position parmi les autres patients du même créneau.</p>
     <div class="d-flex flex-wrap justify-content-center gap-2">
       <a class="btn btn-primary btn-custom btn-primary-custom" href="{% url 'rdv_create' %}">Prendre un rendez-vous</a>
       <a class="btn btn-outline-secondary" href="{% url 'rdv_list' %}">Mes rendez-vous</a>
     </div>
   </div>
+{% endif %}
+{% if show_queue %}
+<script>
+  setTimeout(function () { window.location.reload(); }, 30000);
+</script>
 {% endif %}
 {% endblock %}

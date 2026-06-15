@@ -2,6 +2,20 @@
 
 {% block title %}Connexion — Cabinet Dentaire{% endblock %}
 
+{% block extra_css %}
+<style>
+  .login-back-link {
+    color: var(--dental-green);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .login-back-link:hover {
+    color: var(--dental-green-dark);
+    text-decoration: underline;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="login-wrapper">
   <div class="login-card card-custom">
@@ -28,7 +42,7 @@
       <small class="text-muted">Accès sur invitation uniquement. Les comptes sont créés par l'administration du cabinet.</small>
     </div>
     <div class="mt-2 text-center">
-      <small><a href="{% url 'accueil' %}">← Retour à l'accueil</a></small>
+      <small><a href="{% url 'accueil' %}" class="login-back-link">← Retour à l'accueil</a></small>
     </div>
   </div>
 </div>

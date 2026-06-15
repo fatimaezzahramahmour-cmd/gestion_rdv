@@ -57,7 +57,7 @@
           <li class="nav-item"><a class="nav-link" href="{% url 'accueil' %}#contact">Contact</a></li>
         </ul>
         <ul class="navbar-nav nav-right align-items-center gap-1">
-          {% if request.user.is_authenticated %}
+          {% if request.user.is_authenticated and user_role == 'user' %}
             <li class="nav-item"><a class="nav-link" href="{% url 'rdv_list' %}">Mes rendez-vous</a></li>
             <li class="nav-item"><a class="btn btn-connexion" href="{% url 'logout' %}">Déconnexion</a></li>
           {% else %}
